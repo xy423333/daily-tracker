@@ -47,11 +47,13 @@ button {
   padding: 12px;
   border-radius: 12px;
   border: none;
-  background: #007AFF; /* iOS蓝 */
+  background: #007AFF;
   color: white;
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
+  
+  margin-top: 10px; /* ⭐关键：按钮之间间距 */
 }
 
 /* 删除按钮 */
