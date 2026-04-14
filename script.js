@@ -118,5 +118,35 @@ function renderCalendar(data) {
     cal.appendChild(div);
   }
 }
+function switchTab(tab) {
+  // 隐藏所有页面
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
 
+  // 取消所有按钮高亮
+  document.querySelectorAll(".tabbar div").forEach(t => t.classList.remove("active"));
+
+  // 显示对应页面
+  document.querySelector(".page-" + tab).classList.add("active");
+
+  // 高亮按钮
+  document.getElementById("tab-" + tab).classList.add("active");
+}
+
+function addCustomMood() {
+  const input = document.getElementById("customMood");
+  const emoji = input.value.trim();
+
+  if (!emoji) return alert("请输入emoji");
+
+  const span = document.createElement("span");
+  span.innerText = emoji;
+  span.onclick = function () {
+    selectMood(this);
+  };
+
+  document.getElementById("moodList").appendChild(span);
+
+  input.value = "";
+}
 load();
+switchTab("home");

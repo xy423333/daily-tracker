@@ -12,39 +12,57 @@
 
 <h1>📘 我的日常记录</h1>
 
-<div class="card">
+<!-- 📘 记录页面 -->
+<div class="card page page-home">
 <h3 id="currentDateTitle">📅 今天</h3>
 
 事件：
-<input id="event" style="width:100%">
+<input id="event">
 
 感想：
-<textarea id="note" rows="2" style="width:100%"></textarea>
+<textarea id="note" rows="2"></textarea>
 
 心情：
-<div class="mood">
+<div class="mood" id="moodList">
   <span onclick="selectMood(this)">😄</span>
   <span onclick="selectMood(this)">😐</span>
   <span onclick="selectMood(this)">😢</span>
+  <span onclick="selectMood(this)">😡</span>
+  <span onclick="selectMood(this)">🥱</span>
+  <span onclick="selectMood(this)">😍</span>
 </div>
+
+<!-- 自定义心情 -->
+<input id="customMood" placeholder="输入emoji，例如 😎">
+<button onclick="addCustomMood()">添加心情</button>
 
 <button onclick="addEvent()">添加记录</button>
 </div>
 
-<div class="card">
+<!-- ⚙ 睡眠 -->
+<div class="card page page-settings">
 <h3>😴 睡眠</h3>
 <input type="number" id="sleep">
 <button onclick="saveSleep()">保存</button>
 </div>
 
-<div class="card">
+<!-- 🗓 日历 -->
+<div class="card page page-calendar">
 <h3>🗓 日历</h3>
 <div id="calendar" class="calendar"></div>
 </div>
 
-<div class="card">
+<!-- 📜 记录 -->
+<div class="card page page-home">
 <h3>📜 当天记录</h3>
 <ul id="list"></ul>
+</div>
+
+<!-- 📱 底部导航 -->
+<div class="tabbar">
+  <div onclick="switchTab('home')" id="tab-home">📘<br>记录</div>
+  <div onclick="switchTab('calendar')" id="tab-calendar">🗓<br>日历</div>
+  <div onclick="switchTab('settings')" id="tab-settings">⚙<br>睡眠</div>
 </div>
 
 <script src="script.js"></script>
