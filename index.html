@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>我的日常记录</title>
+
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<h1>📘 我的日常记录</h1>
+
+<div class="card">
+<h3 id="currentDateTitle">📅 今天</h3>
+
+事件：
+<input id="event" style="width:100%">
+
+感想：
+<textarea id="note" rows="2" style="width:100%"></textarea>
+
+心情：
+<div class="mood">
+  <span onclick="selectMood(this)">😄</span>
+  <span onclick="selectMood(this)">😐</span>
+  <span onclick="selectMood(this)">😢</span>
+</div>
+
+<button onclick="addEvent()">添加记录</button>
+</div>
+
+<div class="card">
+<h3>😴 睡眠</h3>
+<input type="number" id="sleep">
+<button onclick="saveSleep()">保存</button>
+</div>
+
+<div class="card">
+<h3>🗓 日历</h3>
+<div id="calendar" class="calendar"></div>
+</div>
+
+<div class="card">
+<h3>📜 当天记录</h3>
+<ul id="list"></ul>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
