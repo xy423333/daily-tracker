@@ -4,6 +4,8 @@ body {
   margin: 0;
   padding: 15px;
   font-size: 16px;
+   padding-bottom: 80px;
+
 }
 
 /* 标题 */
@@ -63,16 +65,20 @@ button {
 }
 
 /* 心情按钮 */
+
 .mood span {
   font-size: 26px;
   margin-right: 10px;
   cursor: pointer;
   opacity: 0.5;
+  transition: all 0.2s;
+  pointer-events: auto;
+
 }
 
 .mood span.selected {
   opacity: 1;
-  transform: scale(1.2);
+  transform: scale(1.3);
 }
 
 /* 日历 */
@@ -120,6 +126,7 @@ li {
   justify-content: space-around;
   border-top: 1px solid #ddd;
   padding: 8px 0;
+  z-index: 999; /* ⭐关键 */
 }
 
 .tabbar div {
@@ -146,4 +153,29 @@ body {
 
 .page.active {
   display: block;
+}
+button {
+  transition: transform 0.1s ease, opacity 0.1s;
+}
+
+button:active {
+  transform: scale(0.95); /* ⭐按下缩小 */
+  opacity: 0.8;
+}
+.card {
+  transition: transform 0.15s;
+}
+
+button {
+  transition: transform 0.1s ease, opacity 0.1s;
+}
+
+button:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+.day.active {
+  background: #007AFF;
+  color: white;
+  transform: scale(1.05);
 }

@@ -54,6 +54,10 @@ function saveSleep() {
 // 点击日历
 function selectDate(date) {
   selectedDate = date;
+
+  // ⭐ 切换到“记录页”
+  switchTab("home");
+
   load();
 }
 
@@ -117,6 +121,7 @@ function renderCalendar(data) {
 
     cal.appendChild(div);
   }
+  bindMoodEvents();
 }
 function switchTab(tab) {
   // 隐藏所有页面
@@ -150,3 +155,12 @@ function addCustomMood() {
 }
 load();
 switchTab("home");
+function bindMoodEvents() {
+  document.querySelectorAll("#moodList span").forEach(span => {
+    span.onclick = function () {
+      document.querySelectorAll("#moodList span").forEach(s => s.classList.remove("selected"));
+      this.classList.add("selected");
+      selectedMood = this.innerText;
+    };
+  });
+}
