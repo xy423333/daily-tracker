@@ -1,11 +1,15 @@
 let selectedMood = "";
 let selectedDate = new Date().toLocaleDateString();
 
-// 选择心情
-function selectMood(el) {
-  document.querySelectorAll(".mood span").forEach(s => s.classList.remove("selected"));
-  el.classList.add("selected");
-  selectedMood = el.innerText;
+// ✅ 绑定心情点击
+function bindMoodEvents() {
+  document.querySelectorAll("#moodList span").forEach(span => {
+    span.onclick = function () {
+      document.querySelectorAll("#moodList span").forEach(s => s.classList.remove("selected"));
+      this.classList.add("selected");
+      selectedMood = this.innerText;
+    };
+  });
 }
 
 // 添加事件
@@ -25,6 +29,7 @@ function addEvent() {
 
   document.getElementById("event").value = "";
   document.getElementById("note").value = "";
+  selectedMood = "";
 
   load();
 }
@@ -37,7 +42,7 @@ function deleteEvent(index) {
   load();
 }
 
-// 保存睡眠
+// 睡眠
 function saveSleep() {
   let sleep = document.getElementById("sleep").value;
 
@@ -54,14 +59,11 @@ function saveSleep() {
 // 点击日历
 function selectDate(date) {
   selectedDate = date;
-
-  // ⭐ 切换到“记录页”
   switchTab("home");
-
   load();
 }
 
-// 加载
+// 加载数据
 function load() {
   let data = JSON.parse(localStorage.getItem("data")) || {};
   const list = document.getElementById("list");
@@ -74,7 +76,7 @@ function load() {
     data[selectedDate].events.forEach((e, i) => {
       let li = document.createElement("li");
       li.innerHTML = `
-        ${e.event} | ${e.mood || ""}
+        ${e.event} ${e.mood || ""}
         <br><small>${e.note || ""}</small>
         <button class="delete" onclick="deleteEvent(${i})">删除</button>
       `;
@@ -87,9 +89,10 @@ function load() {
   }
 
   renderCalendar(data);
+  bindMoodEvents(); // ⭐关键！！！
 }
 
-// 渲染日历
+// 日历
 function renderCalendar(data) {
   const cal = document.getElementById("calendar");
   cal.innerHTML = "";
@@ -121,22 +124,18 @@ function renderCalendar(data) {
 
     cal.appendChild(div);
   }
-  bindMoodEvents();
 }
-function switchTab(tab) {
-  // 隐藏所有页面
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
 
-  // 取消所有按钮高亮
+// 页面切换
+function switchTab(tab) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".tabbar div").forEach(t => t.classList.remove("active"));
 
-  // 显示对应页面
   document.querySelector(".page-" + tab).classList.add("active");
-
-  // 高亮按钮
   document.getElementById("tab-" + tab).classList.add("active");
 }
 
+// 自定义心情
 function addCustomMood() {
   const input = document.getElementById("customMood");
   const emoji = input.value.trim();
@@ -145,22 +144,14 @@ function addCustomMood() {
 
   const span = document.createElement("span");
   span.innerText = emoji;
-  span.onclick = function () {
-    selectMood(this);
-  };
 
   document.getElementById("moodList").appendChild(span);
 
   input.value = "";
+
+  bindMoodEvents(); // ⭐重新绑定
 }
+
+// 初始化
 load();
 switchTab("home");
-function bindMoodEvents() {
-  document.querySelectorAll("#moodList span").forEach(span => {
-    span.onclick = function () {
-      document.querySelectorAll("#moodList span").forEach(s => s.classList.remove("selected"));
-      this.classList.add("selected");
-      selectedMood = this.innerText;
-    };
-  });
-}

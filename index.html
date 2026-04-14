@@ -4,7 +4,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta charset="UTF-8">
 <title>我的日常记录</title>
-
 <link rel="stylesheet" href="style.css">
 </head>
 
@@ -13,49 +12,55 @@
 <h1>📘 我的日常记录</h1>
 
 <!-- 📘 记录页面 -->
-<div class="card page page-home">
-<h3 id="currentDateTitle">📅 今天</h3>
+<div class="page page-home">
 
-事件：
-<input id="event">
+  <div class="card">
+    <h3 id="currentDateTitle">📅 今天</h3>
 
-感想：
-<textarea id="note" rows="2"></textarea>
+    事件：
+    <input id="event">
 
-心情：
-<div class="mood" id="moodList">
-  <span>😄</span>
-  <span>😐</span>
-  <span>😢</span>
-  <span>😡</span>
-  <span>🥱</span>
-  <span>😍</span>
-</div>
+    感想：
+    <textarea id="note" rows="2"></textarea>
 
-<!-- 自定义心情 -->
-<input id="customMood" placeholder="输入emoji，例如 😎">
-<button onclick="addCustomMood()">添加心情</button>
+    心情：
+    <div class="mood" id="moodList">
+      <span>😄</span>
+      <span>😐</span>
+      <span>😢</span>
+      <span>😡</span>
+      <span>🥱</span>
+      <span>😍</span>
+    </div>
 
-<button onclick="addEvent()">添加记录</button>
+    <input id="customMood" placeholder="输入emoji，例如 😎">
+    <button onclick="addCustomMood()">添加心情</button>
+
+    <button onclick="addEvent()">添加记录</button>
+  </div>
+
+  <div class="card">
+    <h3>📜 当天记录</h3>
+    <ul id="list"></ul>
+  </div>
+
 </div>
 
 <!-- ⚙ 睡眠 -->
-<div class="card page page-settings">
-<h3>😴 睡眠</h3>
-<input type="number" id="sleep">
-<button onclick="saveSleep()">保存</button>
+<div class="page page-settings">
+  <div class="card">
+    <h3>😴 睡眠</h3>
+    <input type="number" id="sleep">
+    <button onclick="saveSleep()">保存</button>
+  </div>
 </div>
 
 <!-- 🗓 日历 -->
-<div class="card page page-calendar">
-<h3>🗓 日历</h3>
-<div id="calendar" class="calendar"></div>
-</div>
-
-<!-- 📜 记录 -->
-<div class="card page page-home">
-<h3>📜 当天记录</h3>
-<ul id="list"></ul>
+<div class="page page-calendar">
+  <div class="card">
+    <h3>🗓 日历</h3>
+    <div id="calendar" class="calendar"></div>
+  </div>
 </div>
 
 <!-- 📱 底部导航 -->
