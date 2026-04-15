@@ -60,6 +60,14 @@
 <div class="page page-calendar">
   <div class="card">
     <h3>🗓 日历</h3>
+    
+    <!-- ⭐新增：月份切换导航 -->
+    <div class="calendar-nav">
+      <button onclick="changeMonth(-1)">◀</button>
+      <span id="currentMonth">加载中...</span>
+      <button onclick="changeMonth(1)">▶</button>
+    </div>
+    
     <div id="calendar" class="calendar"></div>
   </div>
 </div>

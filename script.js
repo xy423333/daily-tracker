@@ -1,6 +1,10 @@
 let selectedMood = "";
 let selectedDate = new Date().toLocaleDateString();
 
+// ⭐新增：日历月份状态
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth(); // 0-11
+
 // ✅ 绑定心情点击
 function bindMoodEvents() {
   document.querySelectorAll("#moodList span").forEach(span => {
@@ -97,6 +101,8 @@ function load() {
 }
 
 // 日历
+// ⭐旧版代码已注释（倒序30天）
+/*
 function renderCalendar(data) {
   const cal = document.getElementById("calendar");
   cal.innerHTML = "";
@@ -128,6 +134,63 @@ function renderCalendar(data) {
 
     cal.appendChild(div);
   }
+}
+*/
+
+// ⭐新版：按月正序显示
+function renderCalendar(data) {
+  const cal = document.getElementById("calendar");
+  const monthTitle = document.getElementById("currentMonth");
+  cal.innerHTML = "";
+
+  // 更新月份标题
+  monthTitle.innerText = `${currentYear}年${currentMonth + 1}月`;
+
+  // 获取该月的天数
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+  // 正序遍历该月的每一天
+  for (let day = 1; day <= daysInMonth; day++) {
+    let d = new Date(currentYear, currentMonth, day);
+    let key = d.toLocaleDateString();
+
+    let mood = "";
+    if (data[key] && data[key].events.length > 0) {
+      mood = data[key].events[data[key].events.length - 1].mood;
+    }
+
+    let div = document.createElement("div");
+    div.className = "day";
+
+    if (key === selectedDate) {
+      div.classList.add("active");
+    }
+
+    div.onclick = () => selectDate(key);
+
+    div.innerHTML = `
+      <div class="date">${currentMonth + 1}/${day}</div>
+      <div>${mood || ""}</div>
+    `;
+
+    cal.appendChild(div);
+  }
+}
+
+// ⭐新增：切换月份
+function changeMonth(offset) {
+  currentMonth += offset;
+  
+  // 处理跨年
+  if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  } else if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  }
+
+  load(); // 重新加载日历
 }
 
 // 页面切换
