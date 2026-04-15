@@ -26,6 +26,36 @@ h1 {
   position: relative;
   /* z-index: 1; */
 }
+
+/* 认证卡片特殊样式 */
+.auth-card {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 30px;
+}
+
+/* 用户信息栏 */
+.user-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 12px 15px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.user-info span {
+  font-size: 14px;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 10px;
+}
+
 /* 小标题 */
 .card h3 {
   margin-top: 0;

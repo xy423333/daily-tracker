@@ -3,17 +3,47 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta charset="UTF-8">
+<!-- 🔧 防止浏览器缓存 -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>我的日常记录</title>
 <link rel="stylesheet" href="style.css">
 <link rel="manifest" href="manifest.json">
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 
 <body>
 
 <h1>📘 我的日常记录</h1>
 
+<!-- 🔐 登录/注册页面 -->
+<div class="page page-auth">
+  <div class="card auth-card">
+    <h3 id="authTitle">🔐 登录</h3>
+    
+    <input type="email" id="authEmail" placeholder="邮箱地址">
+    <input type="password" id="authPassword" placeholder="密码">
+    
+    <button onclick="handleAuth()" id="authButton">登录</button>
+    <button onclick="toggleAuthMode()" id="toggleAuthBtn" style="background: #5856d6; margin-top: 8px;">切换到注册</button>
+    
+    <p id="authMessage" style="color: red; font-size: 14px; margin-top: 10px;"></p>
+  </div>
+</div>
+
 <!-- 📘 记录页面 -->
 <div class="page page-home">
+
+  <!-- 用户信息栏 -->
+  <div class="user-info">
+    <span id="userEmail"></span>
+    <button onclick="logout()" style="width: auto; padding: 6px 12px; margin: 0; background: #ff3b30; font-size: 14px;">退出</button>
+  </div>
 
   <div class="card">
     <h3 id="currentDateTitle">📅 今天</h3>
@@ -73,7 +103,7 @@
 </div>
 
 <!-- 📱 底部导航 -->
-<div class="tabbar">
+<div class="tabbar" id="mainTabbar" style="display: none;">
   <div onclick="switchTab('home')" id="tab-home">📘<br>记录</div>
   <div onclick="switchTab('calendar')" id="tab-calendar">🗓<br>日历</div>
   <div onclick="switchTab('settings')" id="tab-settings">⚙<br>睡眠</div>
