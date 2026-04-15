@@ -5,13 +5,17 @@ let selectedDate = new Date().toLocaleDateString();
 function bindMoodEvents() {
   document.querySelectorAll("#moodList span").forEach(span => {
     span.onclick = function () {
-      document.querySelectorAll("#moodList span").forEach(s => s.classList.remove("selected"));
+      console.log("点击:", this.innerText); // 调试
+
+      document.querySelectorAll("#moodList span").forEach(s =>
+        s.classList.remove("selected")
+      );
+
       this.classList.add("selected");
       selectedMood = this.innerText;
     };
   });
 }
-
 // 添加事件
 function addEvent() {
   const event = document.getElementById("event").value;
@@ -128,13 +132,20 @@ function renderCalendar(data) {
 
 // 页面切换
 function switchTab(tab) {
+  // 隐藏所有
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+
+  // 取消按钮高亮
   document.querySelectorAll(".tabbar div").forEach(t => t.classList.remove("active"));
 
-  document.querySelector(".page-" + tab).classList.add("active");
+  // ⭐关键：显示所有同类页面（不是一个）
+  document.querySelectorAll(".page-" + tab).forEach(p => {
+    p.classList.add("active");
+  });
+
+  // 高亮按钮
   document.getElementById("tab-" + tab).classList.add("active");
 }
-
 // 自定义心情
 function addCustomMood() {
   const input = document.getElementById("customMood");
@@ -153,5 +164,11 @@ function addCustomMood() {
 }
 
 // 初始化
-load();
-switchTab("home");
+window.onload = function () {
+  switchTab("home");   // 先切页面
+  load();              // 再加载数据
+  bindMoodEvents();    // 绑定点击
+};
+/*if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}*/

@@ -4,7 +4,7 @@ body {
   margin: 0;
   padding: 15px;
   font-size: 16px;
-   padding-bottom: 80px;
+  /* padding-bottom: 80px; */
 
 }
 
@@ -22,8 +22,10 @@ h1 {
   padding: 15px;
   margin-bottom: 15px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
 
+  position: relative;
+  /* z-index: 1; */
+}
 /* 小标题 */
 .card h3 {
   margin-top: 0;
@@ -99,6 +101,7 @@ button {
 .day.active {
   background: #007AFF;
   color: white;
+  transform: scale(1.05);
 }
 
 /* 日期 */
@@ -125,13 +128,13 @@ li {
   display: flex;
   justify-content: space-around;
   border-top: 1px solid #ddd;
-  padding: 8px 0;
+  padding: 12px 0; /* ⭐修改：从 8px 增加到 12px，提高导航栏高度 */
   z-index: 999; /* ⭐关键 */
 }
 
 .tabbar div {
   text-align: center;
-  font-size: 12px;
+  font-size: 14px; /* ⭐修改：从 12px 增加到 14px，让文字更清晰 */
   color: #666;
   cursor: pointer;
 }
@@ -162,9 +165,7 @@ button:active {
   transform: scale(0.95); /* ⭐按下缩小 */
   opacity: 0.8;
 }
-.card {
-  transition: transform 0.15s;
-}
+
 
 button {
   transition: transform 0.1s ease, opacity 0.1s;
