@@ -3,12 +3,12 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta charset="UTF-8">
-<!-- 🔧 防止浏览器缓存 -->
+<!-- 🔧 防止浏览器缓存（加强版） -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>我的日常记录</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 <link rel="manifest" href="manifest.json">
 
 <!-- Firebase SDK -->
@@ -21,22 +21,7 @@
 
 <h1>📘 我的日常记录</h1>
 
-<!-- 🔐 登录/注册页面 -->
-<div class="page page-auth">
-  <div class="card auth-card">
-    <h3 id="authTitle">🔐 登录</h3>
-    
-    <input type="email" id="authEmail" placeholder="邮箱地址">
-    <input type="password" id="authPassword" placeholder="密码">
-    
-    <button onclick="handleAuth()" id="authButton">登录</button>
-    <button onclick="toggleAuthMode()" id="toggleAuthBtn" style="background: #5856d6; margin-top: 8px;">切换到注册</button>
-    
-    <p id="authMessage" style="color: red; font-size: 14px; margin-top: 10px;"></p>
-  </div>
-</div>
-
-<!-- 📘 记录页面 -->
+<!-- 📘 记录页面（重构版） -->
 <div class="page page-home">
 
   <!-- 用户信息栏 -->
@@ -48,26 +33,79 @@
   <div class="card">
     <h3 id="currentDateTitle">📅 今天</h3>
 
-    事件：
-    <input id="event">
-
-    感想：
-    <textarea id="note" rows="2"></textarea>
-
-    心情：
-    <div class="mood" id="moodList">
-      <span>😄</span>
-      <span>😐</span>
-      <span>😢</span>
-      <span>😡</span>
-      <span>🥱</span>
-      <span>😍</span>
+    <!-- ⭐新增：分类选择 -->
+    <div class="category-selector">
+      <label class="category-option">
+        <input type="radio" name="category" value="mood" checked onchange="selectCategory('mood')">
+        <span>😊 心情</span>
+      </label>
+      <label class="category-option">
+        <input type="radio" name="category" value="sleep" onchange="selectCategory('sleep')">
+        <span>😴 睡眠</span>
+      </label>
+      <label class="category-option">
+        <input type="radio" name="category" value="diet" onchange="selectCategory('diet')">
+        <span>🍽 饮食</span>
+      </label>
     </div>
 
-    <input id="customMood" placeholder="输入emoji，例如 😎">
-    <button onclick="addCustomMood()">添加心情</button>
+    <!-- 心情模块 -->
+    <div id="moodSection">
+      心情：
+      <div class="mood" id="moodList">
+        <span>😄</span>
+        <span>😐</span>
+        <span>😢</span>
+        <span>😡</span>
+        <span>🥱</span>
+        <span>😍</span>
+      </div>
+      <input id="customMood" placeholder="输入emoji，例如 😎">
+      <button onclick="addCustomMood()">添加心情</button>
+    </div>
 
-    <button onclick="addEvent()">添加记录</button>
+    <!-- 睡眠模块 -->
+    <div id="sleepSection" style="display: none;">
+      睡眠时长（小时）：
+      <input type="number" id="sleep" placeholder="例如：8">
+      
+      睡眠质量：
+      <div class="star-rating" id="sleepQuality">
+        <span data-value="1" onclick="selectSleepQuality(1)">⭐</span>
+        <span data-value="2" onclick="selectSleepQuality(2)">⭐</span>
+        <span data-value="3" onclick="selectSleepQuality(3)">⭐</span>
+        <span data-value="4" onclick="selectSleepQuality(4)">⭐</span>
+        <span data-value="5" onclick="selectSleepQuality(5)">⭐</span>
+      </div>
+    </div>
+
+    <!-- 饮食模块 -->
+    <div id="dietSection" style="display: none;">
+      饮食记录：
+      <textarea id="diet" rows="2" placeholder="例如：早餐：鸡蛋牛奶"></textarea>
+      
+      美味程度：
+      <div class="star-rating" id="dietRating">
+        <span data-value="1" onclick="selectDietRating(1)">⭐</span>
+        <span data-value="2" onclick="selectDietRating(2)">⭐</span>
+        <span data-value="3" onclick="selectDietRating(3)">⭐</span>
+        <span data-value="4" onclick="selectDietRating(4)">⭐</span>
+        <span data-value="5" onclick="selectDietRating(5)">⭐</span>
+      </div>
+    </div>
+
+    <hr style="margin: 15px 0; border: none; border-top: 1px solid #eee;">
+
+    <!-- ⭐新增：事件和感想区域（心情分类时显示） -->
+    <div id="eventSection">
+      事件：
+      <input id="event">
+
+      感想：
+      <textarea id="note" rows="2"></textarea>
+
+      <button onclick="addEvent()">添加记录</button>
+    </div>
   </div>
 
   <div class="card">
@@ -77,7 +115,8 @@
 
 </div>
 
-<!-- ⚙ 睡眠 -->
+<!-- ⚙ 睡眠（旧页面，注释保留） -->
+<!--
 <div class="page page-settings">
   <div class="card">
     <h3>😴 睡眠</h3>
@@ -85,30 +124,78 @@
     <button onclick="saveSleep()">保存</button>
   </div>
 </div>
+-->
 
 <!-- 🗓 日历 -->
 <div class="page page-calendar">
   <div class="card">
-    <h3>🗓 日历</h3>
+    <h3>📅 日历</h3>
     
-    <!-- ⭐新增：月份切换导航 -->
+    <!-- 月份切换导航 -->
     <div class="calendar-nav">
       <button onclick="changeMonth(-1)">◀</button>
       <span id="currentMonth">加载中...</span>
       <button onclick="changeMonth(1)">▶</button>
     </div>
     
+    <!-- ⭐新增：星期表头 -->
+    <div class="weekday-header">
+      <div>日</div>
+      <div>一</div>
+      <div>二</div>
+      <div>三</div>
+      <div>四</div>
+      <div>五</div>
+      <div>六</div>
+    </div>
+    
     <div id="calendar" class="calendar"></div>
   </div>
 </div>
 
-<!-- 📱 底部导航 -->
+<!-- 👤 个人页面（新增） -->
+<div class="page page-profile">
+  <!-- 未登录状态：显示认证表单 -->
+  <div id="profileAuth">
+    <div class="card auth-card">
+      <h3 id="authTitle">🔐 登录</h3>
+      
+      <input type="email" id="authEmail" placeholder="邮箱地址">
+      <input type="password" id="authPassword" placeholder="密码">
+      
+      <button onclick="handleAuth()" id="authButton">登录</button>
+      <button onclick="toggleAuthMode()" id="toggleAuthBtn" style="background: #5856d6; margin-top: 8px;">切换到注册</button>
+      
+      <p id="authMessage" style="color: red; font-size: 14px; margin-top: 10px;"></p>
+    </div>
+  </div>
+
+  <!-- 已登录状态：显示用户信息 -->
+  <div id="profileInfo" style="display: none;">
+    <div class="card">
+      <h3>👤 个人信息</h3>
+      <p style="font-size: 16px; color: #333;">邮箱：<span id="profileEmail"></span></p>
+      <button onclick="logout()" style="background: #ff3b30;">退出登录</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📱 底部导航（新版：记录、日期、个人） -->
+<div class="tabbar" id="mainTabbar">
+  <div onclick="switchTab('home')" id="tab-home">📘<br>记录</div>
+  <div onclick="switchTab('calendar')" id="tab-calendar">📅<br>日期</div>
+  <div onclick="switchTab('profile')" id="tab-profile">👤<br>个人</div>
+</div>
+
+<!-- 📱 底部导航（旧版，注释保留） -->
+<!--
 <div class="tabbar" id="mainTabbar" style="display: none;">
   <div onclick="switchTab('home')" id="tab-home">📘<br>记录</div>
   <div onclick="switchTab('calendar')" id="tab-calendar">🗓<br>日历</div>
   <div onclick="switchTab('settings')" id="tab-settings">⚙<br>睡眠</div>
 </div>
+-->
 
-<script src="script.js"></script>
+<script src="script.js?v=2"></script>
 </body>
 </html>
