@@ -4,7 +4,12 @@ body {
   margin: 0;
   padding: 15px;
   font-size: 16px;
-  padding-bottom: 80px;
+
+}
+
+/* 给底部留空间 */
+body {
+  padding-bottom: 100px;
 }
 
 /* 标题 */
@@ -157,18 +162,59 @@ li {
   margin-bottom: 8px;
 }
 
+/* ⭐新增：日历导航样式 */
+.calendar-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 0 10px;
+}
+
+.calendar-nav button {
+  width: auto;
+  padding: 0;
+  margin-top: 0;
+  font-size: 28px;
+  background: transparent;
+  color: #333;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.calendar-nav button:hover {
+  opacity: 0.6;
+}
+
+.calendar-nav button:active {
+  opacity: 0.4;
+}
+
+.calendar-nav span {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  flex: 1;
+  text-align: center;
+}
+
 /* 底部导航栏 */
 .tabbar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 40px);
+  max-width: 500px;
   background: white;
   display: flex;
   justify-content: space-around;
-  border-top: 1px solid #ddd;
-  padding: 8px 0;
-  z-index: 999; /* ⭐关键 */
+  align-items: center;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  padding: 16px 0;
+  z-index: 999;
 }
 
 .tabbar div {
