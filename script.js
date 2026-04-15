@@ -80,7 +80,10 @@ async function handleAuth() {
       messageEl.innerText = "";
     }
   } catch (error) {
-    messageEl.innerText = getAuthErrorMessage(error.code);
+    // 使用 alert 弹窗显示详细错误信息，方便手机调试
+    const errorMessage = getAuthErrorMessage(error.code);
+    alert(errorMessage);
+    messageEl.innerText = errorMessage;
   }
 }
 
@@ -92,9 +95,11 @@ function getAuthErrorMessage(errorCode) {
     "auth/email-already-in-use": "该邮箱已被注册",
     "auth/invalid-email": "邮箱格式不正确",
     "auth/weak-password": "密码至少需要6个字符",
-    "auth/too-many-requests": "尝试次数过多，请稍后再试"
+    "auth/too-many-requests": "尝试次数过多，请稍后再试",
+    "auth/network-request-failed": "网络连接失败，请检查网络或VPN"
   };
-  return messages[errorCode] || "操作失败，请重试";
+  const baseMessage = messages[errorCode] || "操作失败";
+  return baseMessage + "\n(错误代码: " + (errorCode || "未知") + ")";
 }
 
 // 切换登录/注册模式
