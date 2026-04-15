@@ -69,6 +69,7 @@ button {
 /* 心情按钮 */
 
 .mood span {
+  display: inline-block; /* ⭐添加：让 transform 属性生效 */
   font-size: 26px;
   margin-right: 10px;
   cursor: pointer;
