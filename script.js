@@ -759,6 +759,112 @@ function renderMoodChart(data) {
   });
 }
 
+// ⭐新增：渲染单日心情趋势图
+let dayMoodChartInstance = null; // 单日图表实例
+
+function renderDayMoodChart(data) {
+  const canvas = document.getElementById("dayMoodChart");
+  if (!canvas) return; // 如果canvas不存在，直接返回
+
+  const dayData = data[selectedDate];
+  if (!dayData || !dayData.events || dayData.events.length === 0) {
+    // 如果没有数据，销毁旧图表并返回
+    if (dayMoodChartInstance) {
+      dayMoodChartInstance.destroy();
+      dayMoodChartInstance = null;
+    }
+    return;
+  }
+
+  // 提取当天所有带心情的记录
+  const moodEvents = dayData.events
+    .filter(e => e.mood && e.timestamp)
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  if (moodEvents.length === 0) {
+    if (dayMoodChartInstance) {
+      dayMoodChartInstance.destroy();
+      dayMoodChartInstance = null;
+    }
+    return;
+  }
+
+  // 转换为图表数据
+  const labels = moodEvents.map(e => {
+    const time = new Date(e.timestamp);
+    return time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  });
+  const scores = moodEvents.map(e => moodMap[e.mood] || 3);
+
+  const ctx = canvas.getContext("2d");
+
+  // 销毁旧图表
+  if (dayMoodChartInstance) {
+    dayMoodChartInstance.destroy();
+  }
+
+  // 创建新图表
+  dayMoodChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "心情分数",
+        data: scores,
+        borderColor: "#FF6B6B",
+        backgroundColor: "rgba(255, 107, 107, 0.1)",
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: "#FF6B6B",
+        pointRadius: 5,
+        pointHoverRadius: 7
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.5,
+      scales: {
+        y: {
+          min: 1,
+          max: 5,
+          ticks: {
+            stepSize: 1,
+            callback: function(value) {
+              const emojis = {1: "😡", 2: "😢", 3: "😐", 4: "😊", 5: "😄"};
+              return emojis[value] || "";
+            }
+          },
+          grid: {
+            color: "rgba(0, 0, 0, 0.05)"
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            title: function(context) {
+              return `时间：${context[0].label}`;
+            },
+            label: function(context) {
+              const emojis = {1: "😡 愤怒", 2: "😢 难过", 3: "😐 平静", 4: "😊 开心", 5: "😄 兴奋"};
+              return `心情：${emojis[context.parsed.y] || "未知"}`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 // ⭐新增：添加睡眠记录（支持多次记录）
 async function addSleepRecord() {
   const sleepHours = document.getElementById("sleep").value;
@@ -1200,6 +1306,9 @@ async function loadDayDetail() {
 
     // 更新标题
     document.getElementById("detailDateTitle").innerText = "📅 " + selectedDate;
+
+    // 渲染当天心情趋势图
+    renderDayMoodChart(data);
 
     // 渲染事件列表
     renderEventsList(data);
