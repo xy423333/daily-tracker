@@ -1,3 +1,31 @@
+// Firebase配置 - 请替换为您的真实配置
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// 检查Firebase配置是否有效
+const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+
+// 初始化Firebase（仅在配置有效时）
+let db, auth;
+if (isFirebaseConfigured) {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    console.log("✅ Firebase初始化成功");
+  } catch (error) {
+    console.error("❌ Firebase初始化失败:", error);
+  }
+} else {
+  console.warn("⚠️ Firebase未配置，将使用本地存储模式");
+}
+
 let selectedMood = "";
 let selectedDate = new Date().toLocaleDateString();
 let isLoginMode = true; // 登录/注册模式切换
@@ -6,20 +34,62 @@ let selectedCategory = "mood"; // ⭐新增：当前选择的分类（mood/sleep
 let sleepQualityRating = 0; // ⭐新增：睡眠质量星级
 let dietRatingValue = 0; // ⭐新增：饮食美味星级
 
-// ✅ 绑定心情点击
+// ✅ 绑定心情点击（修复版）
 function bindMoodEvents() {
-  document.querySelectorAll("#moodList span").forEach(span => {
+  const moodSpans = document.querySelectorAll("#moodList span");
+  moodSpans.forEach(span => {
+    // 移除旧的事件监听器（防止重复绑定）
+    span.onclick = null;
+    
     span.onclick = function () {
-      console.log("点击:", this.innerText); // 调试
-
+      console.log("点击心情:", this.innerText);
+      
+      // 清除所有选中状态
       document.querySelectorAll("#moodList span").forEach(s =>
         s.classList.remove("selected")
       );
 
+      // 设置当前选中
       this.classList.add("selected");
       selectedMood = this.innerText;
+      
+      console.log("已选择心情:", selectedMood);
     };
   });
+  
+  console.log("✅ 心情事件绑定完成，共", moodSpans.length, "个心情按钮");
+}
+
+// ⭐新增：添加自定义心情
+function addCustomMood() {
+  const customInput = document.getElementById("customMood");
+  const customValue = customInput.value.trim();
+  
+  if (!customValue) {
+    alert("请输入表情符号");
+    return;
+  }
+  
+  // 添加到心情列表
+  const moodList = document.getElementById("moodList");
+  const newSpan = document.createElement("span");
+  newSpan.innerText = customValue;
+  newSpan.onclick = function () {
+    document.querySelectorAll("#moodList span").forEach(s =>
+      s.classList.remove("selected")
+    );
+    this.classList.add("selected");
+    selectedMood = this.innerText;
+  };
+  moodList.appendChild(newSpan);
+  
+  // 清空输入框
+  customInput.value = "";
+  
+  // 自动选中新添加的心情
+  newSpan.click();
+  
+  alert("已添加自定义心情：" + customValue);
 }
 
 // 显示认证页面（旧版，注释保留）
@@ -30,13 +100,12 @@ function showAuthPage() {
 }
 */
 
-// 添加事件（重构版 - 带星级评价）
+// 添加事件（双模式版 - 支持本地和云端）
 async function addEvent() {
   const event = document.getElementById("event").value;
   const note = document.getElementById("note").value;
 
   if (!event) return alert("事件不能为空");
-  if (!currentUser) return alert("请先登录");
 
   try {
     // 获取分类数据
@@ -57,23 +126,44 @@ async function addEvent() {
       };
     }
 
-    // 保存到 Firestore
-    const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
-    
-    await docRef.set({
-      date: selectedDate,
-      events: firebase.firestore.FieldValue.arrayUnion({
-        event,
-        note,
-        mood: selectedMood,
-        ...categoryData // ⭐合并分类数据
-      }),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    // 构建记录对象
+    const record = {
+      event,
+      note,
+      ...categoryData,
+      timestamp: new Date().toISOString()
+    };
 
+    if (currentUser && isFirebaseConfigured) {
+      // 🔥 云端模式：保存到Firestore
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      
+      await docRef.set({
+        date: selectedDate,
+        events: firebase.firestore.FieldValue.arrayUnion(record),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      console.log("✅ 已保存到云端");
+    } else {
+      // 💾 本地模式：保存到localStorage
+      let data = JSON.parse(localStorage.getItem("data")) || {};
+      
+      if (!data[selectedDate]) {
+        data[selectedDate] = { events: [], sleep: "" };
+      }
+      
+      data[selectedDate].events.push(record);
+      localStorage.setItem("data", JSON.stringify(data));
+      
+      console.log("✅ 已保存到本地");
+    }
+
+    // 清空表单
     document.getElementById("event").value = "";
     document.getElementById("note").value = "";
     selectedMood = "";
+    document.querySelectorAll("#moodList span").forEach(s => s.classList.remove("selected"));
     
     // 清空分类输入
     if (selectedCategory === "sleep") {
@@ -87,7 +177,7 @@ async function addEvent() {
     }
 
     load();
-    alert("记录成功！");
+    alert("记录成功！" + (currentUser && isFirebaseConfigured ? "（已同步到云端）" : "（本地存储）"));
   } catch (error) {
     console.error("添加记录失败:", error);
     alert("添加失败：" + error.message);
@@ -130,12 +220,47 @@ async function addEvent() {
 }
 */
 
-// 删除
-function deleteEvent(index) {
-  let data = JSON.parse(localStorage.getItem("data")) || {};
-  data[selectedDate].events.splice(index, 1);
-  localStorage.setItem("data", JSON.stringify(data));
-  load();
+// 删除（双模式版）
+async function deleteEvent(index) {
+  if (!confirm("确定要删除这条记录吗？")) return;
+
+  try {
+    if (currentUser && isFirebaseConfigured) {
+      // 🔥 云端模式：从Firestore删除
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        const data = doc.data();
+        const events = data.events || [];
+        
+        if (index >= 0 && index < events.length) {
+          events.splice(index, 1);
+          
+          await docRef.set({
+            events: events,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          
+          console.log("✅ 已从云端删除");
+        }
+      }
+    } else {
+      // 💾 本地模式：从localStorage删除
+      let data = JSON.parse(localStorage.getItem("data")) || {};
+      
+      if (data[selectedDate] && data[selectedDate].events) {
+        data[selectedDate].events.splice(index, 1);
+        localStorage.setItem("data", JSON.stringify(data));
+        console.log("✅ 已从本地删除");
+      }
+    }
+
+    load();
+  } catch (error) {
+    console.error("删除失败:", error);
+    alert("删除失败：" + error.message);
+  }
 }
 
 // 睡眠
@@ -159,9 +284,35 @@ function selectDate(date) {
   load();
 }
 
-// 加载数据
-function load() {
-  let data = JSON.parse(localStorage.getItem("data")) || {};
+// 加载数据（双模式版）
+async function load() {
+  let data = {};
+  
+  if (currentUser && isFirebaseConfigured) {
+    // 🔥 云端模式：从Firestore加载
+    try {
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        const docData = doc.data();
+        data[selectedDate] = {
+          events: docData.events || [],
+          sleep: ""
+        };
+      }
+      console.log("✅ 从云端加载数据");
+    } catch (error) {
+      console.error("云端加载失败，切换到本地:", error);
+      // 降级到本地存储
+      data = JSON.parse(localStorage.getItem("data")) || {};
+    }
+  } else {
+    // 💾 本地模式：从localStorage加载
+    data = JSON.parse(localStorage.getItem("data")) || {};
+    console.log("✅ 从本地加载数据");
+  }
+
   const list = document.getElementById("list");
   const title = document.getElementById("currentDateTitle");
 
@@ -184,7 +335,7 @@ function load() {
     document.getElementById("sleep").value = "";
   }
 
-  bindMoodEvents(); // ⭐关键！！！
+  bindMoodEvents(); // ⭐关键：重新绑定心情事件
 }
 
 // 日历（旧版代码，注释保留）
@@ -333,7 +484,7 @@ function switchTab(tab) {
   }
 }
 
-// ⭐新增：分类选择
+// ⭐新增：分类选择（修复版）
 function selectCategory(category) {
   selectedCategory = category;
   
@@ -357,7 +508,12 @@ function selectCategory(category) {
     eventSection.style.display = "none"; // ⭐饮食分类：隐藏事件区域
   }
   
-  console.log("选择分类:", category);
+  // ⭐关键：重新绑定心情事件（确保点击有效）
+  if (category === "mood") {
+    setTimeout(() => bindMoodEvents(), 100);
+  }
+  
+  console.log("✅ 选择分类:", category);
 }
 
 // ⭐新增：更新个人页面显示
@@ -409,30 +565,153 @@ function selectDietRating(rating) {
   console.log("饮食美味评分:", rating);
 }
 
-// 监听认证状态变化（重构版）
-auth.onAuthStateChanged((user) => {
-  if (user) {
-    // 用户已登录
-    currentUser = user;
-    document.getElementById("userEmail").innerText = user.email;
-    document.getElementById("mainTabbar").style.display = "flex";
-    updateProfilePage();
-    switchTab("home");
-    load();
-  } else {
-    // 用户未登录
-    currentUser = null;
-    document.getElementById("mainTabbar").style.display = "none";
-    updateProfilePage();
-    switchTab("profile");
+// ⭐新增：处理登录/注册（修复版）
+async function handleAuth() {
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+  const messageEl = document.getElementById("authMessage");
+  
+  // 验证输入
+  if (!email || !password) {
+    messageEl.innerText = "请填写邮箱和密码";
+    return;
   }
-});
+  
+  if (!isFirebaseConfigured) {
+    messageEl.innerText = "⚠️ Firebase未配置，无法使用登录功能。请在script.js中配置您的Firebase信息。";
+    return;
+  }
+
+  try {
+    messageEl.innerText = "处理中...";
+    
+    if (isLoginMode) {
+      // 登录
+      await auth.signInWithEmailAndPassword(email, password);
+      console.log("✅ 登录成功");
+    } else {
+      // 注册
+      await auth.createUserWithEmailAndPassword(email, password);
+      console.log("✅ 注册成功");
+    }
+    
+    messageEl.innerText = "";
+  } catch (error) {
+    console.error("认证失败:", error);
+    
+    // 友好的错误提示
+    let errorMsg = "操作失败：";
+    switch (error.code) {
+      case "auth/user-not-found":
+        errorMsg += "用户不存在，请检查邮箱或切换到注册";
+        break;
+      case "auth/wrong-password":
+        errorMsg += "密码错误";
+        break;
+      case "auth/email-already-in-use":
+        errorMsg += "该邮箱已被注册，请直接登录";
+        break;
+      case "auth/weak-password":
+        errorMsg += "密码至少6位";
+        break;
+      case "auth/invalid-email":
+        errorMsg += "邮箱格式不正确";
+        break;
+      case "auth/network-request-failed":
+        errorMsg += "网络连接失败，请检查网络或VPN";
+        break;
+      default:
+        errorMsg += error.message;
+    }
+    
+    messageEl.innerText = errorMsg;
+  }
+}
+
+// ⭐新增：切换登录/注册模式
+function toggleAuthMode() {
+  isLoginMode = !isLoginMode;
+  
+  const titleEl = document.getElementById("authTitle");
+  const buttonEl = document.getElementById("authButton");
+  const toggleBtnEl = document.getElementById("toggleAuthBtn");
+  
+  if (isLoginMode) {
+    titleEl.innerText = "🔐 登录";
+    buttonEl.innerText = "登录";
+    toggleBtnEl.innerText = "切换到注册";
+  } else {
+    titleEl.innerText = "📝 注册";
+    buttonEl.innerText = "注册";
+    toggleBtnEl.innerText = "切换到登录";
+  }
+  
+  // 清空消息
+  document.getElementById("authMessage").innerText = "";
+}
+
+// ⭐新增：退出登录
+async function logout() {
+  if (!isFirebaseConfigured) {
+    alert("Firebase未配置");
+    return;
+  }
+  
+  try {
+    await auth.signOut();
+    console.log("✅ 已退出登录");
+  } catch (error) {
+    console.error("退出失败:", error);
+    alert("退出失败：" + error.message);
+  }
+}
+
+// 监听认证状态变化（修复版）
+if (isFirebaseConfigured && auth) {
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      // 用户已登录
+      currentUser = user;
+      document.getElementById("userEmail").innerText = user.email;
+      document.getElementById("mainTabbar").style.display = "flex";
+      updateProfilePage();
+      switchTab("home");
+      load();
+      console.log("✅ 用户已登录:", user.email);
+    } else {
+      // 用户未登录
+      currentUser = null;
+      document.getElementById("userEmail").innerText = "未登录（本地模式）";
+      document.getElementById("mainTabbar").style.display = "flex"; // ⭐显示导航栏，允许使用
+      updateProfilePage();
+      switchTab("home");
+      load();
+      console.log("ℹ️ 未登录，使用本地存储模式");
+    }
+  });
+} else {
+  // Firebase未配置，直接使用本地模式
+  console.warn("⚠️ Firebase未配置，应用将以本地模式运行");
+  currentUser = null;
+  document.getElementById("userEmail").innerText = "未登录（本地模式）";
+  document.getElementById("mainTabbar").style.display = "flex";
+  updateProfilePage();
+}
 
 // 初始化
 window.onload = function () {
+  console.log("🚀 应用初始化...");
+  
+  // 检查Firebase配置状态
+  if (!isFirebaseConfigured) {
+    console.warn("⚠️ Firebase未配置，请在script.js顶部配置您的Firebase信息以启用云端同步");
+  }
+  
   switchTab("home");   // 先切页面
   load();              // 再加载数据
-  bindMoodEvents();    // 绑定点击
+  bindMoodEvents();    // 绑定心情点击
+  
+  console.log("✅ 应用初始化完成");
 };
 /*if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
