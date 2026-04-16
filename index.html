@@ -209,13 +209,6 @@
           <h4 style="margin: 0;">📝 事件记录</h4>
           <button onclick="addRecordInDetail()" class="add-record-btn">➕ 补录</button>
         </div>
-        
-        <!-- ⭐新增：单日心情曲线 -->
-        <div class="card" style="margin-bottom: 20px;">
-          <h4 style="margin-bottom: 10px;">📊 今日心情变化</h4>
-          <canvas id="dailyMoodChart" height="250"></canvas>
-        </div>
-        
         <div id="eventsList" class="events-list"></div>
       </div>
 
@@ -335,10 +328,35 @@
 
   <!-- 已登录状态：显示用户信息 -->
   <div id="profileInfo" style="display: none;">
-    <div class="card">
-      <h3>👤 个人信息</h3>
-      <p style="font-size: 16px; color: #333;">邮箱：<span id="profileEmail"></span></p>
-      <button onclick="logout()" style="background: #ff3b30;">退出登录</button>
+    <div class="card profile-card">
+      <h3>👤 个人主页</h3>
+      
+      <!-- 默认头像 -->
+      <div class="avatar-section">
+        <div id="defaultAvatar" class="default-avatar">👤</div>
+      </div>
+      
+      <!-- 邮箱信息 -->
+      <div class="info-item">
+        <label>📧 邮箱：</label>
+        <span id="profileEmail"></span>
+      </div>
+      
+      <!-- 昵称输入 -->
+      <div class="form-group">
+        <label>✏️ 昵称：</label>
+        <input type="text" id="nickname" placeholder="请输入昵称">
+      </div>
+      
+      <!-- 个性签名 -->
+      <div class="form-group">
+        <label>📝 个性签名：</label>
+        <textarea id="bio" rows="2" placeholder="写点什么吧..."></textarea>
+      </div>
+      
+      <!-- 操作按钮 -->
+      <button onclick="saveProfile()" class="save-profile-btn">💾 保存信息</button>
+      <button onclick="logout()" class="logout-btn">🚪 退出登录</button>
     </div>
   </div>
 </div>
