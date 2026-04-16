@@ -114,7 +114,7 @@ function showAuthPage() {
 }
 */
 
-// 添加事件（双模式版 - 支持本地和云端）
+// 添加记录（双模式版 - 修复同步逻辑）
 async function addEvent() {
   const event = document.getElementById("event").value;
   const note = document.getElementById("note").value;
@@ -158,7 +158,17 @@ async function addEvent() {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       
-      console.log("✅ 已保存到云端");
+      console.log("✅ 已保存到云端 Firestore");
+      
+      // ⭐关键修复：同时更新localStorage作为缓存，确保UI立即响应
+      let localData = JSON.parse(localStorage.getItem("data")) || {};
+      if (!localData[selectedDate]) {
+        localData[selectedDate] = { events: [], sleep: "" };
+      }
+      localData[selectedDate].events.push(record);
+      localStorage.setItem("data", JSON.stringify(localData));
+      console.log("✅ 已同步到本地缓存");
+      
     } else {
       // 💾 本地模式：保存到localStorage
       let data = JSON.parse(localStorage.getItem("data")) || {};
@@ -299,7 +309,7 @@ function selectDate(date) {
   loadDayDetail();
 }
 
-// 加载数据（双模式版）
+// 加载数据（双模式版 - 修复云端读取逻辑）
 async function load() {
   let data = {};
   
@@ -313,19 +323,22 @@ async function load() {
         const docData = doc.data();
         data[selectedDate] = {
           events: docData.events || [],
-          sleep: ""
+          sleep: docData.sleep || "",           // ⭐修复：正确读取sleep字段
+          sleepQuality: docData.sleepQuality || 0,  // ⭐修复：读取睡眠质量
+          diet: docData.diet || "",             // ⭐修复：读取饮食内容
+          dietRating: docData.dietRating || 0   // ⭐修复：读取饮食评分
         };
       }
-      console.log("✅ 从云端加载数据");
+      console.log("✅ 从云端加载数据:", selectedDate, "事件数:", data[selectedDate]?.events?.length || 0);
     } catch (error) {
-      console.error("云端加载失败，切换到本地:", error);
+      console.error("❌ 云端加载失败，切换到本地:", error);
       // 降级到本地存储
       data = JSON.parse(localStorage.getItem("data")) || {};
     }
   } else {
     // 💾 本地模式：从localStorage加载
     data = JSON.parse(localStorage.getItem("data")) || {};
-    console.log("✅ 从本地加载数据");
+    console.log("✅ 从本地加载数据:", selectedDate);
   }
 
   const list = document.getElementById("list");
@@ -392,12 +405,12 @@ function renderCalendar(data) {
 }
 */
 
-// ⭐新版：按月正序显示（优化版）
+// ⭐新版：按月正序显示（优化版 - 修复数据源）
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth(); // 0-11
 
-// 渲染日历
-function renderCalendar(data) {
+// 渲染日历（修复版 - 支持云端和本地数据）
+async function renderCalendar(data) {
   const cal = document.getElementById("calendar");
   const monthTitle = document.getElementById("currentMonth");
   
@@ -411,6 +424,35 @@ function renderCalendar(data) {
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
   // 获取该月的天数
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+  // ⭐关键修复：如果data为空且已登录，尝试从云端加载整月数据
+  if ((!data || Object.keys(data).length === 0) && currentUser && isFirebaseConfigured) {
+    console.log("⚠️ 数据为空，尝试从云端加载整月数据...");
+    try {
+      // 计算月份的起止日期
+      const startDate = new Date(currentYear, currentMonth, 1);
+      const endDate = new Date(currentYear, currentMonth + 1, 0);
+      
+      // Firestore查询该月份的所有文档
+      const snapshot = await db.collection("users")
+        .doc(currentUser.uid)
+        .collection("days")
+        .where("date", ">=", startDate.toLocaleDateString())
+        .where("date", "<=", endDate.toLocaleDateString())
+        .get();
+      
+      data = {};
+      snapshot.forEach(doc => {
+        data[doc.id] = doc.data();
+      });
+      
+      console.log("✅ 从云端加载了", Object.keys(data).length, "天的数据");
+    } catch (error) {
+      console.error("❌ 云端加载失败:", error);
+      // 降级到本地
+      data = JSON.parse(localStorage.getItem("data")) || {};
+    }
+  }
 
   // 使用 DocumentFragment 批量操作，提升性能
   const fragment = document.createDocumentFragment();
@@ -548,7 +590,6 @@ function updateProfilePage() {
     authSection.style.display = "none";
     infoSection.style.display = "block";
     document.getElementById("profileEmail").innerText = currentUser.email;
-    loadProfile(); // ⭐加载个人信息
   } else {
     // 未登录
     authSection.style.display = "block";
@@ -732,10 +773,23 @@ async function addSleepRecord() {
       await docRef.set({
         date: selectedDate,
         events: firebase.firestore.FieldValue.arrayUnion(record),
+        sleep: sleepHours,              // ⭐关键修复：同时保存sleep字段
+        sleepQuality: sleepQualityRating,  // ⭐关键修复：同时保存睡眠质量
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       
       console.log("✅ 睡眠记录已保存到云端");
+      
+      // ⭐关键修复：同时更新localStorage作为缓存
+      let localData = JSON.parse(localStorage.getItem("data")) || {};
+      if (!localData[selectedDate]) {
+        localData[selectedDate] = { events: [], sleep: "" };
+      }
+      localData[selectedDate].events.push(record);
+      localData[selectedDate].sleep = sleepHours;
+      localData[selectedDate].sleepQuality = sleepQualityRating;
+      localStorage.setItem("data", JSON.stringify(localData));
+      console.log("✅ 已同步到本地缓存");
     } else {
       // 💾 本地模式：保存到localStorage
       let data = JSON.parse(localStorage.getItem("data")) || {};
@@ -745,6 +799,8 @@ async function addSleepRecord() {
       }
       
       data[selectedDate].events.push(record);
+      data[selectedDate].sleep = sleepHours;
+      data[selectedDate].sleepQuality = sleepQualityRating;
       localStorage.setItem("data", JSON.stringify(data));
       
       console.log("✅ 睡眠记录已保存到本地");
@@ -790,10 +846,23 @@ async function addDietRecord() {
       await docRef.set({
         date: selectedDate,
         events: firebase.firestore.FieldValue.arrayUnion(record),
+        diet: dietContent,              // ⭐关键修复：同时保存diet字段
+        dietRating: dietRatingValue,    // ⭐关键修复：同时保存饮食评分
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       
       console.log("✅ 饮食记录已保存到云端");
+      
+      // ⭐关键修复：同时更新localStorage作为缓存
+      let localData = JSON.parse(localStorage.getItem("data")) || {};
+      if (!localData[selectedDate]) {
+        localData[selectedDate] = { events: [], sleep: "" };
+      }
+      localData[selectedDate].events.push(record);
+      localData[selectedDate].diet = dietContent;
+      localData[selectedDate].dietRating = dietRatingValue;
+      localStorage.setItem("data", JSON.stringify(localData));
+      console.log("✅ 已同步到本地缓存");
     } else {
       // 💾 本地模式：保存到localStorage
       let data = JSON.parse(localStorage.getItem("data")) || {};
@@ -803,6 +872,8 @@ async function addDietRecord() {
       }
       
       data[selectedDate].events.push(record);
+      data[selectedDate].diet = dietContent;
+      data[selectedDate].dietRating = dietRatingValue;
       localStorage.setItem("data", JSON.stringify(data));
       
       console.log("✅ 饮食记录已保存到本地");
@@ -931,7 +1002,6 @@ if (isFirebaseConfigured && auth) {
       document.getElementById("userEmail").innerText = user.email;
       document.getElementById("mainTabbar").style.display = "flex";
       updateProfilePage();
-      loadProfile(); // ⭐加载个人信息
       switchTab("home");
       load();
       console.log("✅ 用户已登录:", user.email);
@@ -1117,7 +1187,7 @@ ${JSON.stringify(moodData, null, 2)}
 // ========================================
 
 /**
- * 加载日期详情数据
+ * 加载日期详情数据（修复版 - 确保读取所有字段）
  */
 async function loadDayDetail() {
   let data = {};
@@ -1137,12 +1207,17 @@ async function loadDayDetail() {
           diet: docData.diet || "",
           dietRating: docData.dietRating || 0
         };
+        console.log("✅ 从云端加载日期详情:", selectedDate);
+        console.log("   - 事件数:", data[selectedDate].events.length);
+        console.log("   - 睡眠:", data[selectedDate].sleep, "小时");
+        console.log("   - 饮食:", data[selectedDate].diet ? "有记录" : "无记录");
+      } else {
+        console.log("ℹ️ 云端无该日期数据:", selectedDate);
       }
-      console.log("✅ 从云端加载日期详情");
     } else {
       // 💾 本地模式：从localStorage加载
       data = JSON.parse(localStorage.getItem("data")) || {};
-      console.log("✅ 从本地加载日期详情");
+      console.log("✅ 从本地加载日期详情:", selectedDate);
     }
 
     // 更新标题
@@ -1161,7 +1236,7 @@ async function loadDayDetail() {
     switchDetailTab('events');
 
   } catch (error) {
-    console.error("加载日期详情失败:", error);
+    console.error("❌ 加载日期详情失败:", error);
     alert("加载失败：" + error.message);
   }
 }
@@ -1207,6 +1282,137 @@ function renderEventsList(data) {
     `;
     
     container.appendChild(eventDiv);
+  });
+  
+  // ⭐新增：渲染单日心情曲线
+  renderDailyMoodChart(data);
+}
+
+/**
+ * ⭐新增：渲染单日心情曲线
+ * @param {Object} data - 所有日期数据
+ */
+function renderDailyMoodChart(data) {
+  const canvas = document.getElementById("dailyMoodChart");
+  if (!canvas) {
+    console.warn("⚠️ 找不到 dailyMoodChart canvas 元素");
+    return;
+  }
+  
+  const ctx = canvas.getContext("2d");
+  const dayData = data[selectedDate];
+  
+  // 销毁旧图表实例
+  if (window.dailyMoodChartInstance) {
+    window.dailyMoodChartInstance.destroy();
+  }
+  
+  // 检查是否有心情数据
+  if (!dayData || !dayData.events || dayData.events.length === 0) {
+    // 显示空状态
+    const container = canvas.parentElement;
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">😊</div>
+        <div class="empty-text">暂无心情记录</div>
+      </div>
+    `;
+    return;
+  }
+  
+  // 过滤出有心情的记录
+  const moodEvents = dayData.events.filter(e => e.mood && moodMap[e.mood]);
+  
+  if (moodEvents.length === 0) {
+    const container = canvas.parentElement;
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">😊</div>
+        <div class="empty-text">暂无心情记录</div>
+      </div>
+    `;
+    return;
+  }
+  
+  // 准备图表数据
+  const labels = moodEvents.map((e, i) => {
+    if (e.timestamp) {
+      const time = new Date(e.timestamp);
+      return time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    }
+    return `记录${i + 1}`;
+  });
+  
+  const values = moodEvents.map(e => moodMap[e.mood]);
+  const moods = moodEvents.map(e => e.mood);
+  
+  // 创建新图表
+  window.dailyMoodChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '心情指数',
+        data: values,
+        borderColor: '#007AFF',
+        backgroundColor: 'rgba(0, 122, 255, 0.1)',
+        borderWidth: 3,
+        pointBackgroundColor: values.map(v => {
+          // 根据心情值设置颜色
+          if (v >= 4) return '#4CAF50'; // 绿色 - 开心
+          if (v >= 3) return '#FFC107'; // 黄色 - 一般
+          return '#F44336'; // 红色 - 不开心
+        }),
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        tension: 0.4, // 平滑曲线
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const mood = moods[context.dataIndex];
+              const value = context.parsed.y;
+              return `心情: ${mood} (指数: ${value})`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 6,
+          ticks: {
+            stepSize: 1,
+            callback: function(value) {
+              // Y轴显示心情emoji
+              const moodEmojis = ['', '😡', '😢', '😐', '😊', '😄'];
+              return moodEmojis[value] || '';
+            }
+          },
+          title: {
+            display: true,
+            text: '心情指数'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: '时间'
+          }
+        }
+      }
+    }
   });
 }
 
@@ -1334,93 +1540,176 @@ function addRecordInDetail() {
 }
 
 /**
- * 编辑事件
+ * 编辑事件（优化版 - 增强错误处理和用户体验）
  */
-function editEvent(index) {
-  let data = JSON.parse(localStorage.getItem("data")) || {};
-  const dayData = data[selectedDate];
+async function editEvent(index) {
+  let data = {};
   
-  if (!dayData || !dayData.events || !dayData.events[index]) {
-    alert("记录不存在");
-    return;
-  }
-  
-  const event = dayData.events[index];
-  modalMode = 'event';
-  editingIndex = index;
-  
-  document.getElementById("modalTitle").innerText = "✏️ 编辑事件";
-  document.getElementById("modalSleepForm").style.display = "none";
-  document.getElementById("modalDietForm").style.display = "none";
-  document.getElementById("modalMoodList").style.display = "flex";
-  
-  // 填充表单
-  document.getElementById("modalEvent").value = event.event || "";
-  document.getElementById("modalNote").value = event.note || "";
-  modalMoodValue = event.mood || '';
-  
-  // 选中心情
-  document.querySelectorAll("#modalMoodList span").forEach(s => {
-    s.classList.remove("selected");
-    if (s.innerText === modalMoodValue) {
-      s.classList.add("selected");
+  try {
+    if (currentUser && isFirebaseConfigured) {
+      // 🔥 云端模式：从Firestore加载
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        const docData = doc.data();
+        data[selectedDate] = {
+          events: docData.events || []
+        };
+      } else {
+        // 如果云端没有文档，尝试从本地缓存读取，避免报错
+        const localData = JSON.parse(localStorage.getItem("data")) || {};
+        data = localData;
+      }
+    } else {
+      // 💾 本地模式：从localStorage加载
+      data = JSON.parse(localStorage.getItem("data")) || {};
     }
-  });
-  
-  // 显示弹窗
-  document.getElementById("editModal").style.display = "flex";
+    
+    const dayData = data[selectedDate];
+    
+    if (!dayData || !dayData.events || !dayData.events[index]) {
+      alert("⚠️ 未找到该条记录，可能已被删除");
+      return;
+    }
+    
+    const event = dayData.events[index];
+    modalMode = 'event';
+    editingIndex = index;
+    
+    document.getElementById("modalTitle").innerText = "✏️ 编辑事件";
+    document.getElementById("modalSleepForm").style.display = "none";
+    document.getElementById("modalDietForm").style.display = "none";
+    document.getElementById("modalMoodList").style.display = "flex";
+    
+    // 填充表单
+    document.getElementById("modalEvent").value = event.event || "";
+    document.getElementById("modalNote").value = event.note || "";
+    modalMoodValue = event.mood || '';
+    
+    // 选中心情
+    document.querySelectorAll("#modalMoodList span").forEach(s => {
+      s.classList.remove("selected");
+      if (s.innerText === modalMoodValue) {
+        s.classList.add("selected");
+      }
+    });
+    
+    // 显示弹窗
+    document.getElementById("editModal").style.display = "flex";
+    
+  } catch (error) {
+    console.error("❌ 加载事件失败:", error);
+    alert("加载失败，请检查网络连接或稍后重试");
+  }
 }
 
 /**
- * 编辑睡眠记录
+ * 编辑睡眠记录（优化版 - 支持云端数据及降级处理）
  */
-function editSleepInDetail() {
-  let data = JSON.parse(localStorage.getItem("data")) || {};
-  const dayData = data[selectedDate];
+async function editSleepInDetail() {
+  let data = {};
   
-  modalMode = 'sleep';
-  editingIndex = -1;
-  
-  document.getElementById("modalTitle").innerText = dayData && dayData.sleep ? "✏️ 编辑睡眠" : "➕ 添加睡眠";
-  document.getElementById("modalSleepForm").style.display = "block";
-  document.getElementById("modalDietForm").style.display = "none";
-  document.getElementById("modalMoodList").style.display = "none";
-  
-  // 填充表单
-  document.getElementById("modalSleep").value = (dayData && dayData.sleep) || "";
-  modalSleepQualityValue = (dayData && dayData.sleepQuality) || 0;
-  
-  // 更新星级显示
-  updateModalSleepQualityStars();
-  
-  // 显示弹窗
-  document.getElementById("editModal").style.display = "flex";
+  try {
+    if (currentUser && isFirebaseConfigured) {
+      // 🔥 云端模式：从Firestore加载
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        const docData = doc.data();
+        data[selectedDate] = {
+          sleep: docData.sleep || "",
+          sleepQuality: docData.sleepQuality || 0
+        };
+      } else {
+         // 降级到本地
+         const localData = JSON.parse(localStorage.getItem("data")) || {};
+         data = localData;
+      }
+    } else {
+      // 💾 本地模式：从localStorage加载
+      data = JSON.parse(localStorage.getItem("data")) || {};
+    }
+    
+    const dayData = data[selectedDate] || {};
+    
+    modalMode = 'sleep';
+    editingIndex = -1;
+    
+    document.getElementById("modalTitle").innerText = dayData.sleep ? "✏️ 编辑睡眠" : "➕ 添加睡眠";
+    document.getElementById("modalSleepForm").style.display = "block";
+    document.getElementById("modalDietForm").style.display = "none";
+    document.getElementById("modalMoodList").style.display = "none";
+    
+    // 填充表单
+    document.getElementById("modalSleep").value = dayData.sleep || "";
+    modalSleepQualityValue = dayData.sleepQuality || 0;
+    
+    // 更新星级显示
+    updateModalSleepQualityStars();
+    
+    // 显示弹窗
+    document.getElementById("editModal").style.display = "flex";
+    
+  } catch (error) {
+    console.error("❌ 加载睡眠记录失败:", error);
+    alert("加载失败，请检查网络连接");
+  }
 }
 
 /**
- * 编辑饮食记录
+ * 编辑饮食记录（优化版 - 支持云端数据及降级处理）
  */
-function editDietInDetail() {
-  let data = JSON.parse(localStorage.getItem("data")) || {};
-  const dayData = data[selectedDate];
+async function editDietInDetail() {
+  let data = {};
   
-  modalMode = 'diet';
-  editingIndex = -1;
-  
-  document.getElementById("modalTitle").innerText = dayData && dayData.diet ? "✏️ 编辑饮食" : "➕ 添加饮食";
-  document.getElementById("modalSleepForm").style.display = "none";
-  document.getElementById("modalDietForm").style.display = "block";
-  document.getElementById("modalMoodList").style.display = "none";
-  
-  // 填充表单
-  document.getElementById("modalDiet").value = (dayData && dayData.diet) || "";
-  modalDietRatingValue = (dayData && dayData.dietRating) || 0;
-  
-  // 更新星级显示
-  updateModalDietRatingStars();
-  
-  // 显示弹窗
-  document.getElementById("editModal").style.display = "flex";
+  try {
+    if (currentUser && isFirebaseConfigured) {
+      // 🔥 云端模式：从Firestore加载
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        const docData = doc.data();
+        data[selectedDate] = {
+          diet: docData.diet || "",
+          dietRating: docData.dietRating || 0
+        };
+      } else {
+        // 降级到本地
+        const localData = JSON.parse(localStorage.getItem("data")) || {};
+        data = localData;
+      }
+    } else {
+      // 💾 本地模式：从localStorage加载
+      data = JSON.parse(localStorage.getItem("data")) || {};
+    }
+    
+    const dayData = data[selectedDate] || {};
+    
+    modalMode = 'diet';
+    editingIndex = -1;
+    
+    document.getElementById("modalTitle").innerText = dayData.diet ? "✏️ 编辑饮食" : "➕ 添加饮食";
+    document.getElementById("modalSleepForm").style.display = "none";
+    document.getElementById("modalDietForm").style.display = "block";
+    document.getElementById("modalMoodList").style.display = "none";
+    
+    // 填充表单
+    document.getElementById("modalDiet").value = dayData.diet || "";
+    modalDietRatingValue = dayData.dietRating || 0;
+    
+    // 更新星级显示
+    updateModalDietRatingStars();
+    
+    // 显示弹窗
+    document.getElementById("editModal").style.display = "flex";
+    
+  } catch (error) {
+    console.error("❌ 加载饮食记录失败:", error);
+    alert("加载失败，请检查网络连接");
+  }
 }
 
 /**
@@ -1487,7 +1776,7 @@ function closeEditModal() {
 }
 
 /**
- * 保存弹窗中的记录
+ * 保存弹窗中的记录（修复版 - 支持云端同步）
  */
 async function saveModalRecord() {
   try {
@@ -1546,7 +1835,7 @@ async function saveModalRecord() {
     // 保存到localStorage
     localStorage.setItem("data", JSON.stringify(data));
     
-    // 如果已登录且配置了Firebase，同步到云端
+    // ⭐关键修复：如果已登录且配置了Firebase，同步到云端
     if (currentUser && isFirebaseConfigured) {
       const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
       
@@ -1555,18 +1844,21 @@ async function saveModalRecord() {
           events: data[selectedDate].events,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
+        console.log("✅ 事件已同步到云端");
       } else if (modalMode === 'sleep') {
         await docRef.set({
           sleep: data[selectedDate].sleep,
           sleepQuality: data[selectedDate].sleepQuality,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
+        console.log("✅ 睡眠记录已同步到云端");
       } else if (modalMode === 'diet') {
         await docRef.set({
           diet: data[selectedDate].diet,
           dietRating: data[selectedDate].dietRating,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
+        console.log("✅ 饮食记录已同步到云端");
       }
     }
     
@@ -1576,10 +1868,10 @@ async function saveModalRecord() {
     // 重新加载详情页面
     loadDayDetail();
     
-    alert("保存成功！");
+    alert("保存成功！" + (currentUser && isFirebaseConfigured ? "（已同步到云端）" : ""));
     
   } catch (error) {
-    console.error("保存失败:", error);
+    console.error("❌ 保存失败:", error);
     alert("保存失败：" + error.message);
   }
 }
@@ -1612,59 +1904,5 @@ async function deleteEventFromDetail(index) {
   } catch (error) {
     console.error("删除失败:", error);
     alert("删除失败：" + error.message);
-  }
-}
-
-/**
- * 加载用户个人信息
- */
-async function loadProfile() {
-  if (!currentUser || !isFirebaseConfigured) return;
-  
-  try {
-    const doc = await db.collection("users").doc(currentUser.uid).get();
-    
-    if (doc.exists) {
-      const data = doc.data();
-      
-      // 填充表单
-      document.getElementById("nickname").value = data.nickname || "";
-      document.getElementById("bio").value = data.bio || "";
-      
-      console.log("✅ 个人信息加载成功");
-    } else {
-      console.log("ℹ️ 用户文档不存在，显示空表单");
-    }
-  } catch (error) {
-    console.error("加载个人信息失败:", error);
-  }
-}
-
-/**
- * 保存用户个人信息
- */
-async function saveProfile() {
-  if (!currentUser || !isFirebaseConfigured) {
-    alert("请先登录");
-    return;
-  }
-  
-  const nickname = document.getElementById("nickname").value.trim();
-  const bio = document.getElementById("bio").value.trim();
-  
-  try {
-    // 保存到 Firestore
-    await db.collection("users").doc(currentUser.uid).set({
-      email: currentUser.email,
-      nickname: nickname,
-      bio: bio,
-      updatedAt: new Date().toISOString()
-    }, { merge: true });
-    
-    alert("保存成功！");
-    console.log("✅ 个人信息保存成功");
-  } catch (error) {
-    console.error("保存个人信息失败:", error);
-    alert("保存失败：" + error.message);
   }
 }

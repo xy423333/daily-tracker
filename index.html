@@ -8,14 +8,13 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>我的日常记录</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=2">
 <link rel="manifest" href="manifest.json">
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-<!-- <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script> -->
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -210,6 +209,13 @@
           <h4 style="margin: 0;">📝 事件记录</h4>
           <button onclick="addRecordInDetail()" class="add-record-btn">➕ 补录</button>
         </div>
+        
+        <!-- ⭐新增：单日心情曲线 -->
+        <div class="card" style="margin-bottom: 20px;">
+          <h4 style="margin-bottom: 10px;">📊 今日心情变化</h4>
+          <canvas id="dailyMoodChart" height="250"></canvas>
+        </div>
+        
         <div id="eventsList" class="events-list"></div>
       </div>
 
@@ -310,7 +316,7 @@
   </div>
 </div>
 
-<!-- 👤 个人页面（升级版） -->
+<!-- 👤 个人页面（新增） -->
 <div class="page page-profile">
   <!-- 未登录状态：显示认证表单 -->
   <div id="profileAuth">
@@ -327,37 +333,12 @@
     </div>
   </div>
 
-  <!-- 已登录状态：显示个人信息 -->
+  <!-- 已登录状态：显示用户信息 -->
   <div id="profileInfo" style="display: none;">
-    <div class="card profile-card">
-      <h3>👤 个人主页</h3>
-      
-      <!-- 默认头像 -->
-      <div class="avatar-section">
-        <div id="defaultAvatar" class="default-avatar">👤</div>
-      </div>
-      
-      <!-- 邮箱信息 -->
-      <div class="info-item">
-        <label>📧 邮箱：</label>
-        <span id="profileEmail"></span>
-      </div>
-      
-      <!-- 昵称输入 -->
-      <div class="form-group">
-        <label>✏️ 昵称：</label>
-        <input type="text" id="nickname" placeholder="请输入昵称">
-      </div>
-      
-      <!-- 个性签名 -->
-      <div class="form-group">
-        <label>📝 个性签名：</label>
-        <textarea id="bio" rows="2" placeholder="写点什么吧..."></textarea>
-      </div>
-      
-      <!-- 操作按钮 -->
-      <button onclick="saveProfile()" class="save-profile-btn">💾 保存信息</button>
-      <button onclick="logout()" class="logout-btn">🚪 退出登录</button>
+    <div class="card">
+      <h3>👤 个人信息</h3>
+      <p style="font-size: 16px; color: #333;">邮箱：<span id="profileEmail"></span></p>
+      <button onclick="logout()" style="background: #ff3b30;">退出登录</button>
     </div>
   </div>
 </div>
