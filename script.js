@@ -548,6 +548,7 @@ function updateProfilePage() {
     authSection.style.display = "none";
     infoSection.style.display = "block";
     document.getElementById("profileEmail").innerText = currentUser.email;
+    loadProfile(); // ⭐加载个人信息
   } else {
     // 未登录
     authSection.style.display = "block";
@@ -930,6 +931,7 @@ if (isFirebaseConfigured && auth) {
       document.getElementById("userEmail").innerText = user.email;
       document.getElementById("mainTabbar").style.display = "flex";
       updateProfilePage();
+      loadProfile(); // ⭐加载个人信息
       switchTab("home");
       load();
       console.log("✅ 用户已登录:", user.email);
@@ -1610,5 +1612,59 @@ async function deleteEventFromDetail(index) {
   } catch (error) {
     console.error("删除失败:", error);
     alert("删除失败：" + error.message);
+  }
+}
+
+/**
+ * 加载用户个人信息
+ */
+async function loadProfile() {
+  if (!currentUser || !isFirebaseConfigured) return;
+  
+  try {
+    const doc = await db.collection("users").doc(currentUser.uid).get();
+    
+    if (doc.exists) {
+      const data = doc.data();
+      
+      // 填充表单
+      document.getElementById("nickname").value = data.nickname || "";
+      document.getElementById("bio").value = data.bio || "";
+      
+      console.log("✅ 个人信息加载成功");
+    } else {
+      console.log("ℹ️ 用户文档不存在，显示空表单");
+    }
+  } catch (error) {
+    console.error("加载个人信息失败:", error);
+  }
+}
+
+/**
+ * 保存用户个人信息
+ */
+async function saveProfile() {
+  if (!currentUser || !isFirebaseConfigured) {
+    alert("请先登录");
+    return;
+  }
+  
+  const nickname = document.getElementById("nickname").value.trim();
+  const bio = document.getElementById("bio").value.trim();
+  
+  try {
+    // 保存到 Firestore
+    await db.collection("users").doc(currentUser.uid).set({
+      email: currentUser.email,
+      nickname: nickname,
+      bio: bio,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    
+    alert("保存成功！");
+    console.log("✅ 个人信息保存成功");
+  } catch (error) {
+    console.error("保存个人信息失败:", error);
+    alert("保存失败：" + error.message);
   }
 }

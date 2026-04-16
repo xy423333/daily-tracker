@@ -337,6 +337,72 @@ button:active {
   margin-top: 15px;
 }
 
+/* ⭐新增：头像区域样式 */
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+/* 默认头像样式 */
+.default-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  border: 3px solid white;
+}
+
+/* ⭐新增：个人信息项样式 */
+.info-item {
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.info-item label {
+  font-weight: 600;
+  color: #666;
+  margin-right: 8px;
+}
+
+.info-item span {
+  color: #333;
+  font-size: 15px;
+}
+
+/* ⭐新增：表单组样式 */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+/* ⭐新增：保存按钮样式 */
+.save-profile-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin-top: 15px;
+}
+
+.logout-btn {
+  background: #ff3b30;
+  margin-top: 10px;
+}
+
 /* ⭐新增：星级评价样式 */
 .star-rating {
   display: flex;
