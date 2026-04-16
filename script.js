@@ -1062,56 +1062,24 @@ ${JSON.stringify(moodData, null, 2)}
     document.getElementById("aiReport").style.display = "block";
     document.getElementById("aiReport").innerText = "🤖 AI正在分析中，请稍候...";
 
-    // ⚠️ 注意：这是前端测试版本，API Key会暴露
-    // 正式使用时应该通过后端代理调用
-    const API_KEY = "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"; // 👈 替换为你的OpenAI API Key
-    
-    if (API_KEY === "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") {
-      document.getElementById("aiReport").innerHTML = `
-        <div style="color: #ff9500; font-weight: bold;">⚠️ 配置提示</div>
-        <p style="margin-top: 10px; color: #666;">
-          要使用AI分析功能，你需要：<br><br>
-          1️⃣ 在 script.js 中找到 <code>generateAIReport()</code> 函数<br>
-          2️⃣ 将 <code>YOUR_OPENAI_API_KEY</code> 替换为你的真实API Key<br>
-          3️⃣ 刷新页面后再次点击"生成AI报告"<br><br>
-          💡 获取API Key：<a href="https://platform.openai.com/api-keys" target="_blank">OpenAI官网</a><br>
-          ⚠️ 安全提示：前端直接调用会暴露API Key，生产环境建议使用后端代理
-        </p>
-      `;
-      return;
-    }
-
-    // 调用OpenAI API
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    // ✅ 安全方式：通过后端代理调用（API Key不会暴露）
+    const res = await fetch("/api/ai", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + API_KEY
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo", // 使用更稳定的模型
-        messages: [
-          {
-            role: "system",
-            content: "你是一个温暖专业的心理分析助手，擅长从情绪记录中发现规律并给出建设性建议。"
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 500,
-        temperature: 0.7
+        prompt: prompt
       })
     });
 
     if (!res.ok) {
       const errorData = await res.json();
-      throw new Error(errorData.error?.message || "API请求失败");
+      throw new Error(errorData.error || errorData.message || "API请求失败");
     }
 
     const responseData = await res.json();
-    const reportText = responseData.choices[0].message.content;
+    const reportText = responseData.report;
 
     // 显示报告
     document.getElementById("aiReport").innerText = reportText;
@@ -1124,7 +1092,8 @@ ${JSON.stringify(moodData, null, 2)}
       <p style="margin-top: 10px; color: #666;">错误信息：${err.message}</p>
       <p style="margin-top: 10px; color: #999; font-size: 14px;">
         可能原因：<br>
-        • API Key无效或已过期<br>
+        • 后端服务未启动或未部署<br>
+        • OPENAI_API_KEY未配置<br>
         • 网络连接问题<br>
         • API配额已用完
       </p>
