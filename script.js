@@ -963,6 +963,175 @@ window.onload = function () {
   
   console.log("✅ 应用初始化完成");
 };
+
+// ========================================
+// 🤖 AI情绪分析报告功能
+// ========================================
+
+/**
+ * 提取最近7天的情绪数据
+ * @param {Object} data - 所有日期数据
+ * @returns {Array} 最近7天的情绪数据数组
+ */
+function getRecentMoodData(data) {
+  let result = [];
+
+  Object.keys(data).forEach(date => {
+    const dayData = data[date];
+    
+    // 处理不同数据结构（兼容本地和云端）
+    let events = [];
+    if (dayData.events && Array.isArray(dayData.events)) {
+      events = dayData.events;
+    } else if (Array.isArray(dayData)) {
+      events = dayData;
+    }
+
+    if (events.length > 0) {
+      // 获取当天的最后一条记录（通常是最新的情绪）
+      const lastEvent = events[events.length - 1];
+      
+      result.push({
+        date: date,
+        mood: lastEvent.mood || "",
+        note: lastEvent.note || "",
+        event: lastEvent.event || ""
+      });
+    }
+  });
+
+  // 按日期排序
+  result.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  // 只取最近7天
+  return result.slice(-7);
+}
+
+/**
+ * 生成AI情绪分析报告
+ */
+async function generateAIReport() {
+  let data;
+
+  try {
+    if (currentUser && isFirebaseConfigured) {
+      // 🔥 云端模式：从Firestore获取数据
+      document.getElementById("aiReport").style.display = "block";
+      document.getElementById("aiReport").innerText = "⏳ 正在从云端获取数据...";
+      
+      const snapshot = await db.collection("users").doc(currentUser.uid).collection("days").get();
+      data = {};
+      
+      snapshot.forEach(doc => {
+        data[doc.id] = doc.data();
+      });
+      
+      console.log("✅ 已从云端获取数据:", Object.keys(data).length, "天");
+    } else {
+      // 💾 本地模式：从localStorage获取数据
+      data = JSON.parse(localStorage.getItem("data")) || {};
+      console.log("✅ 已从本地获取数据:", Object.keys(data).length, "天");
+    }
+
+    // 提取最近7天的情绪数据
+    const moodData = getRecentMoodData(data);
+
+    if (moodData.length === 0) {
+      alert("❌ 没有足够的数据进行分析，请先添加一些记录");
+      document.getElementById("aiReport").style.display = "none";
+      return;
+    }
+
+    // 构建AI提示词
+    const prompt = `
+你是一个温暖的心理分析助手，请根据以下用户最近${moodData.length}天的情绪记录生成简短报告：
+
+数据：
+${JSON.stringify(moodData, null, 2)}
+
+要求：
+1. 总结整体情绪趋势（积极/消极/波动）
+2. 指出情绪低谷或明显波动的日期
+3. 给出1-2条温和、实用的建议
+4. 语言风格：中文、简洁、温暖、鼓励性
+5. 格式：使用emoji增强可读性，分段清晰
+
+请生成报告：
+`;
+
+    document.getElementById("aiReport").style.display = "block";
+    document.getElementById("aiReport").innerText = "🤖 AI正在分析中，请稍候...";
+
+    // ⚠️ 注意：这是前端测试版本，API Key会暴露
+    // 正式使用时应该通过后端代理调用
+    const API_KEY = "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"; // 👈 替换为你的OpenAI API Key
+    
+    if (API_KEY === "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") {
+      document.getElementById("aiReport").innerHTML = `
+        <div style="color: #ff9500; font-weight: bold;">⚠️ 配置提示</div>
+        <p style="margin-top: 10px; color: #666;">
+          要使用AI分析功能，你需要：<br><br>
+          1️⃣ 在 script.js 中找到 <code>generateAIReport()</code> 函数<br>
+          2️⃣ 将 <code>YOUR_OPENAI_API_KEY</code> 替换为你的真实API Key<br>
+          3️⃣ 刷新页面后再次点击"生成AI报告"<br><br>
+          💡 获取API Key：<a href="https://platform.openai.com/api-keys" target="_blank">OpenAI官网</a><br>
+          ⚠️ 安全提示：前端直接调用会暴露API Key，生产环境建议使用后端代理
+        </p>
+      `;
+      return;
+    }
+
+    // 调用OpenAI API
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + API_KEY
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo", // 使用更稳定的模型
+        messages: [
+          {
+            role: "system",
+            content: "你是一个温暖专业的心理分析助手，擅长从情绪记录中发现规律并给出建设性建议。"
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.7
+      })
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error?.message || "API请求失败");
+    }
+
+    const responseData = await res.json();
+    const reportText = responseData.choices[0].message.content;
+
+    // 显示报告
+    document.getElementById("aiReport").innerText = reportText;
+    console.log("✅ AI报告生成成功");
+
+  } catch (err) {
+    console.error("AI分析失败:", err);
+    document.getElementById("aiReport").innerHTML = `
+      <div style="color: #ff3b30; font-weight: bold;">❌ 分析失败</div>
+      <p style="margin-top: 10px; color: #666;">错误信息：${err.message}</p>
+      <p style="margin-top: 10px; color: #999; font-size: 14px;">
+        可能原因：<br>
+        • API Key无效或已过期<br>
+        • 网络连接问题<br>
+        • API配额已用完
+      </p>
+    `;
+  }
+}
+
 /*if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }*/

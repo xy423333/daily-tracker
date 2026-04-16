@@ -164,6 +164,14 @@
     <h3>📊 情绪趋势</h3>
     <canvas id="moodChart"></canvas>
   </div>
+
+  <!-- ⭐新增：AI情绪分析报告 -->
+  <div class="card">
+    <h3>🤖 AI情绪分析</h3>
+    <p style="font-size: 14px; color: #666; margin-bottom: 10px;">基于最近7天的记录生成个性化分析报告</p>
+    <button onclick="generateAIReport()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 100%;">📊 生成AI报告</button>
+    <div id="aiReport" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; display: none; line-height: 1.8; white-space: pre-wrap;"></div>
+  </div>
 </div>
 
 <!-- 👤 个人页面（新增） -->
