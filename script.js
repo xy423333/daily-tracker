@@ -566,6 +566,122 @@ function selectDietRating(rating) {
   console.log("饮食美味评分:", rating);
 }
 
+// ⭐新增：添加睡眠记录（支持多次记录）
+async function addSleepRecord() {
+  const sleepHours = document.getElementById("sleep").value;
+  
+  if (!sleepHours) {
+    alert("请输入睡眠时长");
+    return;
+  }
+
+  try {
+    // 构建睡眠记录
+    const record = {
+      event: `😴 睡眠 ${sleepHours}小时`,
+      note: sleepQualityRating > 0 ? `睡眠质量：${'⭐'.repeat(sleepQualityRating)}` : "",
+      category: "sleep",
+      sleep: sleepHours,
+      sleepQuality: sleepQualityRating,
+      timestamp: new Date().toISOString()
+    };
+
+    if (currentUser && isFirebaseConfigured) {
+      // 🔥 云端模式：保存到Firestore
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      
+      await docRef.set({
+        date: selectedDate,
+        events: firebase.firestore.FieldValue.arrayUnion(record),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      console.log("✅ 睡眠记录已保存到云端");
+    } else {
+      // 💾 本地模式：保存到localStorage
+      let data = JSON.parse(localStorage.getItem("data")) || {};
+      
+      if (!data[selectedDate]) {
+        data[selectedDate] = { events: [], sleep: "" };
+      }
+      
+      data[selectedDate].events.push(record);
+      localStorage.setItem("data", JSON.stringify(data));
+      
+      console.log("✅ 睡眠记录已保存到本地");
+    }
+
+    // 清空表单
+    document.getElementById("sleep").value = "";
+    sleepQualityRating = 0;
+    document.querySelectorAll("#sleepQuality span").forEach(star => star.classList.remove("active"));
+
+    load();
+    alert("睡眠记录添加成功！" + (currentUser && isFirebaseConfigured ? "（已同步到云端）" : "（本地存储）"));
+  } catch (error) {
+    console.error("添加睡眠记录失败:", error);
+    alert("添加失败：" + error.message);
+  }
+}
+
+// ⭐新增：添加饮食记录（支持多次记录）
+async function addDietRecord() {
+  const dietContent = document.getElementById("diet").value.trim();
+  
+  if (!dietContent) {
+    alert("请输入饮食内容");
+    return;
+  }
+
+  try {
+    // 构建饮食记录
+    const record = {
+      event: `🍽 饮食`,
+      note: dietContent + (dietRatingValue > 0 ? ` ${'⭐'.repeat(dietRatingValue)}` : ""),
+      category: "diet",
+      diet: dietContent,
+      dietRating: dietRatingValue,
+      timestamp: new Date().toISOString()
+    };
+
+    if (currentUser && isFirebaseConfigured) {
+      // 🔥 云端模式：保存到Firestore
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      
+      await docRef.set({
+        date: selectedDate,
+        events: firebase.firestore.FieldValue.arrayUnion(record),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      console.log("✅ 饮食记录已保存到云端");
+    } else {
+      // 💾 本地模式：保存到localStorage
+      let data = JSON.parse(localStorage.getItem("data")) || {};
+      
+      if (!data[selectedDate]) {
+        data[selectedDate] = { events: [], sleep: "" };
+      }
+      
+      data[selectedDate].events.push(record);
+      localStorage.setItem("data", JSON.stringify(data));
+      
+      console.log("✅ 饮食记录已保存到本地");
+    }
+
+    // 清空表单
+    document.getElementById("diet").value = "";
+    dietRatingValue = 0;
+    document.querySelectorAll("#dietRating span").forEach(star => star.classList.remove("active"));
+
+    load();
+    alert("饮食记录添加成功！" + (currentUser && isFirebaseConfigured ? "（已同步到云端）" : "（本地存储）"));
+  } catch (error) {
+    console.error("添加饮食记录失败:", error);
+    alert("添加失败：" + error.message);
+  }
+}
+
 // ⭐新增：处理登录/注册（修复版）
 async function handleAuth() {
   const email = document.getElementById("authEmail").value.trim();
