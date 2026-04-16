@@ -294,8 +294,9 @@ function saveSleep() {
 // 点击日历
 function selectDate(date) {
   selectedDate = date;
-  switchTab("home");
-  load();
+  // 跳转到日期详情页面
+  switchTab("daydetail");
+  loadDayDetail();
 }
 
 // 加载数据（双模式版）
@@ -475,18 +476,22 @@ function switchTab(tab) {
   // 隐藏所有
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
 
-  // 取消按钮高亮
-  document.querySelectorAll(".tabbar div").forEach(t => t.classList.remove("active"));
+  // 取消按钮高亮（详情页不显示底部导航）
+  if (tab !== "daydetail") {
+    document.querySelectorAll(".tabbar div").forEach(t => t.classList.remove("active"));
+  }
 
   // 显示对应页面
   document.querySelectorAll(".page-" + tab).forEach(p => {
     p.classList.add("active");
   });
 
-  // 高亮按钮
-  const tabElement = document.getElementById("tab-" + tab);
-  if (tabElement) {
-    tabElement.classList.add("active");
+  // 高亮按钮（详情页不显示底部导航）
+  if (tab !== "daydetail") {
+    const tabElement = document.getElementById("tab-" + tab);
+    if (tabElement) {
+      tabElement.classList.add("active");
+    }
   }
 
   // 如果切换到个人页面，更新显示状态
@@ -1104,3 +1109,187 @@ ${JSON.stringify(moodData, null, 2)}
 /*if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }*/
+
+// ========================================
+// 📅 日期详情页面功能
+// ========================================
+
+/**
+ * 加载日期详情数据
+ */
+async function loadDayDetail() {
+  let data = {};
+  
+  try {
+    if (currentUser && isFirebaseConfigured) {
+      // 🔥 云端模式：从Firestore加载
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        const docData = doc.data();
+        data[selectedDate] = {
+          events: docData.events || [],
+          sleep: docData.sleep || "",
+          sleepQuality: docData.sleepQuality || 0,
+          diet: docData.diet || "",
+          dietRating: docData.dietRating || 0
+        };
+      }
+      console.log("✅ 从云端加载日期详情");
+    } else {
+      // 💾 本地模式：从localStorage加载
+      data = JSON.parse(localStorage.getItem("data")) || {};
+      console.log("✅ 从本地加载日期详情");
+    }
+
+    // 更新标题
+    document.getElementById("detailDateTitle").innerText = "📅 " + selectedDate;
+
+    // 渲染事件列表
+    renderEventsList(data);
+    
+    // 渲染睡眠信息
+    renderSleepInfo(data);
+    
+    // 渲染饮食信息
+    renderDietInfo(data);
+
+    // 默认显示事件标签
+    switchDetailTab('events');
+
+  } catch (error) {
+    console.error("加载日期详情失败:", error);
+    alert("加载失败：" + error.message);
+  }
+}
+
+/**
+ * 渲染事件列表
+ */
+function renderEventsList(data) {
+  const container = document.getElementById("eventsList");
+  container.innerHTML = "";
+
+  const dayData = data[selectedDate];
+  
+  if (!dayData || !dayData.events || dayData.events.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <div class="empty-text">暂无事件记录</div>
+      </div>
+    `;
+    return;
+  }
+
+  dayData.events.forEach((event, index) => {
+    const eventDiv = document.createElement("div");
+    eventDiv.className = "event-item";
+    
+    let timeStr = "";
+    if (event.timestamp) {
+      const time = new Date(event.timestamp);
+      timeStr = time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    eventDiv.innerHTML = `
+      ${event.mood ? `<div class="event-mood">${event.mood}</div>` : ''}
+      <div class="event-title">${event.event || ''}</div>
+      ${event.note ? `<div class="event-note">${event.note}</div>` : ''}
+      ${timeStr ? `<div class="event-time">🕐 ${timeStr}</div>` : ''}
+    `;
+    
+    container.appendChild(eventDiv);
+  });
+}
+
+/**
+ * 渲染睡眠信息
+ */
+function renderSleepInfo(data) {
+  const container = document.getElementById("sleepInfo");
+  const dayData = data[selectedDate];
+
+  if (!dayData || !dayData.sleep) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">😴</div>
+        <div class="empty-text">暂无睡眠记录</div>
+      </div>
+    `;
+    return;
+  }
+
+  const sleepHours = dayData.sleep;
+  const sleepQuality = dayData.sleepQuality || 0;
+  const stars = "⭐".repeat(sleepQuality) + "☆".repeat(5 - sleepQuality);
+
+  container.innerHTML = `
+    <div class="info-item">
+      <div class="info-label">睡眠时长</div>
+      <div class="info-value">${sleepHours} 小时</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">睡眠质量</div>
+      <div class="stars">${stars}</div>
+    </div>
+  `;
+}
+
+/**
+ * 渲染饮食信息
+ */
+function renderDietInfo(data) {
+  const container = document.getElementById("dietInfo");
+  const dayData = data[selectedDate];
+
+  if (!dayData || !dayData.diet) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🍽</div>
+        <div class="empty-text">暂无饮食记录</div>
+      </div>
+    `;
+    return;
+  }
+
+  const dietContent = dayData.diet;
+  const dietRating = dayData.dietRating || 0;
+  const stars = "⭐".repeat(dietRating) + "☆".repeat(5 - dietRating);
+
+  container.innerHTML = `
+    <div class="info-item">
+      <div class="info-label">饮食内容</div>
+      <div class="info-value" style="font-size: 16px; line-height: 1.6;">${dietContent}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">美味程度</div>
+      <div class="stars">${stars}</div>
+    </div>
+  `;
+}
+
+/**
+ * 切换详情页面标签
+ */
+function switchDetailTab(tabName) {
+  // 更新导航栏状态
+  document.querySelectorAll(".nav-item").forEach(item => {
+    item.classList.remove("active");
+  });
+  document.getElementById("nav-" + tabName).classList.add("active");
+
+  // 更新内容区域
+  document.querySelectorAll(".content-section").forEach(section => {
+    section.classList.remove("active");
+  });
+  document.getElementById("content-" + tabName).classList.add("active");
+}
+
+/**
+ * 返回日历页面
+ */
+function backToCalendar() {
+  switchTab("calendar");
+}

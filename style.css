@@ -361,3 +361,218 @@ button:active {
   max-height: 300px;
   width: 100%;
 }
+
+/* ========================================
+   📅 日期详情页面样式
+   ======================================== */
+
+/* 详情页面顶部返回栏 */
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+  padding: 10px 0;
+}
+
+.back-btn {
+  width: auto;
+  padding: 8px 16px;
+  margin: 0;
+  background: #007AFF;
+  font-size: 14px;
+}
+
+.detail-header h3 {
+  margin: 0;
+  flex: 1;
+}
+
+/* 详情页面容器（左右布局） */
+.detail-container {
+  display: flex;
+  gap: 15px;
+  min-height: 400px;
+}
+
+/* 左侧圆角导航栏 */
+.detail-sidebar {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.sidebar-nav {
+  background: white;
+  border-radius: 16px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #f8f9fa;
+}
+
+.nav-item:hover {
+  background: #e9ecef;
+  transform: translateY(-2px);
+}
+
+.nav-item.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.nav-icon {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+
+.nav-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 右侧内容区域 */
+.detail-content {
+  flex: 1;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.content-section {
+  display: none;
+}
+
+.content-section.active {
+  display: block;
+}
+
+.content-section h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 18px;
+}
+
+/* 事件列表样式 */
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-item {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 15px;
+  border-left: 4px solid #007AFF;
+}
+
+.event-item .event-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.event-item .event-mood {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.event-item .event-note {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+}
+
+.event-item .event-time {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+}
+
+/* 信息卡片样式（睡眠、饮食） */
+.info-card {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.info-card .info-item {
+  margin-bottom: 15px;
+}
+
+.info-card .info-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.info-card .info-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.info-card .stars {
+  font-size: 24px;
+  letter-spacing: 2px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+.empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.empty-state .empty-text {
+  font-size: 16px;
+}
+
+/* 响应式设计（移动端优化） */
+@media (max-width: 768px) {
+  .detail-container {
+    flex-direction: column;
+  }
+
+  .detail-sidebar {
+    width: 100%;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    justify-content: space-around;
+  }
+
+  .nav-item {
+    flex: 1;
+    padding: 12px 8px;
+  }
+
+  .nav-icon {
+    font-size: 20px;
+  }
+
+  .nav-text {
+    font-size: 12px;
+  }
+}

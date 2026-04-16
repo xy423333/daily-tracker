@@ -174,6 +174,56 @@
   </div>
 </div>
 
+<!-- 📅 日期详情页面（新增） -->
+<div class="page page-daydetail">
+  <!-- 顶部返回栏 -->
+  <div class="detail-header">
+    <button onclick="backToCalendar()" class="back-btn">◀ 返回</button>
+    <h3 id="detailDateTitle">📅 日期详情</h3>
+  </div>
+
+  <div class="detail-container">
+    <!-- 左侧圆角导航栏 -->
+    <div class="detail-sidebar">
+      <div class="sidebar-nav">
+        <div class="nav-item active" onclick="switchDetailTab('events')" id="nav-events">
+          <span class="nav-icon">📝</span>
+          <span class="nav-text">事件</span>
+        </div>
+        <div class="nav-item" onclick="switchDetailTab('sleep')" id="nav-sleep">
+          <span class="nav-icon">😴</span>
+          <span class="nav-text">睡眠</span>
+        </div>
+        <div class="nav-item" onclick="switchDetailTab('diet')" id="nav-diet">
+          <span class="nav-icon">🍽</span>
+          <span class="nav-text">饮食</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧内容区域 -->
+    <div class="detail-content">
+      <!-- 事件内容 -->
+      <div class="content-section active" id="content-events">
+        <h4>📝 事件记录</h4>
+        <div id="eventsList" class="events-list"></div>
+      </div>
+
+      <!-- 睡眠内容 -->
+      <div class="content-section" id="content-sleep">
+        <h4>😴 睡眠记录</h4>
+        <div id="sleepInfo" class="info-card"></div>
+      </div>
+
+      <!-- 饮食内容 -->
+      <div class="content-section" id="content-diet">
+        <h4>🍽 饮食记录</h4>
+        <div id="dietInfo" class="info-card"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 👤 个人页面（新增） -->
 <div class="page page-profile">
   <!-- 未登录状态：显示认证表单 -->
