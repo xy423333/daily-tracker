@@ -355,3 +355,9 @@ button:active {
   opacity: 1;
   transform: scale(1.2);
 }
+
+/* ⭐新增：情绪趋势图样式 */
+#moodChart {
+  max-height: 300px;
+  width: 100%;
+}

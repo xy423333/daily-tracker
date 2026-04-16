@@ -9,6 +9,19 @@ const firebaseConfig = {
   measurementId: "G-0P44SBZDHY"
 };
 
+// ⭐新增：情绪映射（将emoji转换为数值）
+const moodMap = {
+  "😄": 5,
+  "😊": 4,
+  "😐": 3,
+  "😢": 2,
+  "😡": 1,
+  "🥱": 2,
+  "😍": 5
+};
+
+let moodChart = null; // ⭐新增：图表实例
+
 // 检查Firebase配置是否有效
 const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
 
@@ -337,6 +350,9 @@ async function load() {
   }
 
   bindMoodEvents(); // ⭐关键：重新绑定心情事件
+  
+  // ⭐新增：渲染情绪趋势图
+  renderMoodChart(data);
 }
 
 // 日历（旧版代码，注释保留）
@@ -564,6 +580,123 @@ function selectDietRating(rating) {
   });
   
   console.log("饮食美味评分:", rating);
+}
+
+// ⭐新增：提取每日情绪数据用于趋势图
+function getMoodTrendData(data) {
+  let trend = [];
+
+  Object.keys(data).forEach(date => {
+    const events = data[date].events || [];
+
+    if (events.length > 0) {
+      // 取当天最后一个心情记录
+      const moodEvents = events.filter(e => e.mood);
+      if (moodEvents.length > 0) {
+        const lastMood = moodEvents[moodEvents.length - 1].mood;
+        const score = moodMap[lastMood] || 3; // 默认值为3（中性）
+
+        trend.push({
+          date,
+          score
+        });
+      }
+    }
+  });
+
+  // 按时间排序
+  trend.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  return trend;
+}
+
+// ⭐新增：渲染情绪趋势图
+function renderMoodChart(data) {
+  const canvas = document.getElementById("moodChart");
+  if (!canvas) return; // 如果canvas不存在，直接返回
+
+  const trend = getMoodTrendData(data);
+
+  if (trend.length === 0) {
+    // 如果没有数据，销毁旧图表并返回
+    if (moodChart) {
+      moodChart.destroy();
+      moodChart = null;
+    }
+    return;
+  }
+
+  const labels = trend.map(item => item.date);
+  const scores = trend.map(item => item.score);
+
+  const ctx = canvas.getContext("2d");
+
+  // 销毁旧图表
+  if (moodChart) {
+    moodChart.destroy();
+  }
+
+  // 创建新图表
+  moodChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "情绪趋势",
+        data: scores,
+        borderColor: "#007AFF",
+        backgroundColor: "rgba(0, 122, 255, 0.1)",
+        tension: 0.3,
+        fill: true,
+        pointBackgroundColor: "#007AFF",
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2,
+      scales: {
+        y: {
+          min: 1,
+          max: 5,
+          ticks: {
+            stepSize: 1,
+            callback: function(value) {
+              const emojis = {1: "😡", 2: "😢", 3: "😐", 4: "😊", 5: "😄"};
+              return emojis[value] || "";
+            }
+          },
+          grid: {
+            color: "rgba(0, 0, 0, 0.05)"
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const emojis = {1: "😡 愤怒", 2: "😢 难过", 3: "😐 平静", 4: "😊 开心", 5: "😄 兴奋"};
+              return `情绪：${emojis[context.parsed.y] || "未知"}`;
+            }
+          }
+        }
+      }
+    }
+  });
 }
 
 // ⭐新增：添加睡眠记录（支持多次记录）

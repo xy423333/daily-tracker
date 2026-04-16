@@ -15,6 +15,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -154,6 +157,12 @@
     </div>
     
     <div id="calendar" class="calendar"></div>
+  </div>
+
+  <!-- ⭐新增：情绪趋势图 -->
+  <div class="card">
+    <h3>📊 情绪趋势</h3>
+    <canvas id="moodChart"></canvas>
   </div>
 </div>
 
