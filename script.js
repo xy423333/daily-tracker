@@ -517,8 +517,32 @@ function renderCalendar(data) {
   cal.appendChild(fragment);
 }
 
-// ⭐新增：切换月份
-function changeMonth(offset) {
+// ⭐新增：切换月份（旧版 - 已禁用）
+/*
+function changeMonth_OLD(offset) {
+  currentMonth += offset;
+  
+  if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  } else if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  }
+
+  let data = JSON.parse(localStorage.getItem("data")) || {};
+  renderCalendar(data);
+}
+*/
+
+// ⭐新增：切换月份（新版 - 强制使用 Firebase，单一数据源）
+async function changeMonth(offset) {
+  // ⭐登录锁：必须登录后才能操作
+  if (!currentUser || !isFirebaseConfigured) {
+    alert("❌ 请先登录后再切换月份");
+    return;
+  }
+  
   currentMonth += offset;
   
   // 处理跨年
@@ -530,9 +554,21 @@ function changeMonth(offset) {
     currentYear--;
   }
 
-  // 重新渲染日历
-  let data = JSON.parse(localStorage.getItem("data")) || {};
-  renderCalendar(data);
+  // 🔥 从云端加载数据并渲染日历
+  try {
+    const snapshot = await db.collection("users").doc(currentUser.uid).collection("days").get();
+    const data = {};
+    
+    snapshot.forEach(doc => {
+      data[doc.id] = doc.data();
+    });
+    
+    renderCalendar(data);
+    console.log("✅ 月份切换完成，从云端加载数据");
+  } catch (error) {
+    console.error("切换月份失败:", error);
+    alert("切换失败：" + error.message);
+  }
 }
 
 // 页面切换（重构版）
@@ -563,12 +599,63 @@ function switchTab(tab) {
     updateProfilePage();
   }
 
-  // 如果切换到日历，重新渲染
+  // 🔥 如果切换到日历，从云端加载数据并渲染
+  if (tab === "calendar") {
+    // ⭐登录锁：必须登录后才能操作
+    if (!currentUser || !isFirebaseConfigured) {
+      console.log("⚠️ 用户未登录，跳过日历渲染");
+      return;
+    }
+    
+    // 从云端加载整个月份的数据
+    (async () => {
+      try {
+        const snapshot = await db.collection("users").doc(currentUser.uid).collection("days").get();
+        const data = {};
+        
+        snapshot.forEach(doc => {
+          data[doc.id] = doc.data();
+        });
+        
+        renderCalendar(data);
+        console.log("✅ 月份切换完成，从云端加载数据");
+      } catch (error) {
+        console.error("切换月份失败:", error);
+      }
+    })();
+  }
+}
+
+// 切换页面（旧版 - 已禁用）
+/*
+function switchTab_OLD(tab) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+
+  if (tab !== "daydetail") {
+    document.querySelectorAll(".tabbar div").forEach(t => t.classList.remove("active"));
+  }
+
+  document.querySelectorAll(".page-" + tab).forEach(p => {
+    p.classList.add("active");
+  });
+
+  if (tab !== "daydetail") {
+    const tabElement = document.getElementById("tab-" + tab);
+    if (tabElement) {
+      tabElement.classList.add("active");
+    }
+  }
+
+  if (tab === "profile") {
+    updateProfilePage();
+  }
+
   if (tab === "calendar") {
     let data = JSON.parse(localStorage.getItem("data")) || {};
     renderCalendar(data);
   }
 }
+*/
 
 // ⭐新增：分类选择（修复版）
 function selectCategory(category) {
@@ -1286,30 +1373,30 @@ ${JSON.stringify(moodData, null, 2)}
  * 加载日期详情数据
  */
 async function loadDayDetail() {
+  // ⭐登录锁：必须登录后才能操作
+  if (!currentUser || !isFirebaseConfigured) {
+    alert("❌ 请先登录后再查看日期详情");
+    return;
+  }
+  
   let data = {};
   
   try {
-    if (currentUser && isFirebaseConfigured) {
-      // 🔥 云端模式：从Firestore加载
-      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
-      const doc = await docRef.get();
-      
-      if (doc.exists) {
-        const docData = doc.data();
-        data[selectedDate] = {
-          events: docData.events || [],
-          sleep: docData.sleep || "",
-          sleepQuality: docData.sleepQuality || 0,
-          diet: docData.diet || "",
-          dietRating: docData.dietRating || 0
-        };
-      }
-      console.log("✅ 从云端加载日期详情");
-    } else {
-      // 💾 本地模式：从localStorage加载
-      data = JSON.parse(localStorage.getItem("data")) || {};
-      console.log("✅ 从本地加载日期详情");
+    // 🔥 只使用 Firebase Firestore 加载
+    const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+    const doc = await docRef.get();
+    
+    if (doc.exists) {
+      const docData = doc.data();
+      data[selectedDate] = {
+        events: docData.events || [],
+        sleep: docData.sleep || "",
+        sleepQuality: docData.sleepQuality || 0,
+        diet: docData.diet || "",
+        dietRating: docData.dietRating || 0
+      };
     }
+    console.log("✅ 从云端加载日期详情");
 
     // 更新标题
     document.getElementById("detailDateTitle").innerText = "📅 " + selectedDate;
