@@ -871,36 +871,29 @@ async function addSleepRecord() {
   }
 
   try {
-    // 构建睡眠记录
-    const record = {
-      event: `😴 睡眠 ${sleepHours}小时`,
-      note: sleepQualityRating > 0 ? `睡眠质量：${'⭐'.repeat(sleepQualityRating)}` : "",
-      category: "sleep",
-      sleep: sleepHours,
-      sleepQuality: sleepQualityRating,
-      timestamp: new Date().toISOString()
-    };
-
     if (currentUser && isFirebaseConfigured) {
-      // 🔥 云端模式：保存到Firestore
+      // 🔥 云端模式：保存到Firestore（只保存sleep字段，不保存到events）
       const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
       
       await docRef.set({
         date: selectedDate,
-        events: firebase.firestore.FieldValue.arrayUnion(record),
+        sleep: sleepHours,
+        sleepQuality: sleepQualityRating,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       
       console.log("✅ 睡眠记录已保存到云端");
     } else {
-      // 💾 本地模式：保存到localStorage
+      // 💾 本地模式：保存到localStorage（只保存sleep字段，不保存到events）
       let data = JSON.parse(localStorage.getItem("data")) || {};
       
       if (!data[selectedDate]) {
         data[selectedDate] = { events: [], sleep: "" };
       }
       
-      data[selectedDate].events.push(record);
+      // ⭐ 直接保存到sleep字段，而不是events数组
+      data[selectedDate].sleep = sleepHours;
+      data[selectedDate].sleepQuality = sleepQualityRating;
       localStorage.setItem("data", JSON.stringify(data));
       
       console.log("✅ 睡眠记录已保存到本地");
@@ -929,36 +922,29 @@ async function addDietRecord() {
   }
 
   try {
-    // 构建饮食记录
-    const record = {
-      event: `🍽 饮食`,
-      note: dietContent + (dietRatingValue > 0 ? ` ${'⭐'.repeat(dietRatingValue)}` : ""),
-      category: "diet",
-      diet: dietContent,
-      dietRating: dietRatingValue,
-      timestamp: new Date().toISOString()
-    };
-
     if (currentUser && isFirebaseConfigured) {
-      // 🔥 云端模式：保存到Firestore
+      // 🔥 云端模式：保存到Firestore（只保存diet字段，不保存到events）
       const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
       
       await docRef.set({
         date: selectedDate,
-        events: firebase.firestore.FieldValue.arrayUnion(record),
+        diet: dietContent,
+        dietRating: dietRatingValue,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       
       console.log("✅ 饮食记录已保存到云端");
     } else {
-      // 💾 本地模式：保存到localStorage
+      // 💾 本地模式：保存到localStorage（只保存diet字段，不保存到events）
       let data = JSON.parse(localStorage.getItem("data")) || {};
       
       if (!data[selectedDate]) {
-        data[selectedDate] = { events: [], sleep: "" };
+        data[selectedDate] = { events: [], sleep: "", diet: "", dietRating: 0 };
       }
       
-      data[selectedDate].events.push(record);
+      // ⭐ 直接保存到diet字段，而不是events数组
+      data[selectedDate].diet = dietContent;
+      data[selectedDate].dietRating = dietRatingValue;
       localStorage.setItem("data", JSON.stringify(data));
       
       console.log("✅ 饮食记录已保存到本地");
