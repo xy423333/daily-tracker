@@ -1,11 +1,12 @@
-// Firebase配置 - 请替换为您的真实配置
+// Firebase配置 - 真实配置
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBbBQ1o-Vh38wKPYNJF2oddo0IG-V5-xJE",
+  authDomain: "daily-tracker-18cf2.firebaseapp.com",
+  projectId: "daily-tracker-18cf2",
+  storageBucket: "daily-tracker-18cf2.firebasestorage.app",
+  messagingSenderId: "134257074427",
+  appId: "1:134257074427:web:a77a3625e7aba8e46d505e",
+  measurementId: "G-0P44SBZDHY"
 };
 
 // 检查Firebase配置是否有效
