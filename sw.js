@@ -3,7 +3,9 @@ const urlsToCache = [
   "./",
   "./index.html",
   "./style.css",
-  "./script.js"
+  "./script.js",
+  "./icon.png",
+  "./manifest.json"
 ];
 
 self.addEventListener("install", event => {
@@ -21,3 +23,6 @@ self.addEventListener("fetch", event => {
     })
   );
 });
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}

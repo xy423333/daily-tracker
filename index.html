@@ -12,6 +12,12 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#007AFF">
 
+<!-- 📱 PWA 图标支持 -->
+<link rel="apple-touch-icon" href="./icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon.png">
+<link rel="shortcut icon" href="./icon.png">
+
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -204,9 +210,9 @@
 
     <!-- 右侧内容区域 -->
     <div class="detail-content">
-      <!-- 心情趋势图 -->
+      <!-- ⭐ 单日心情趋势图 -->
       <div style="margin-bottom: 20px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-        <h4 style="margin: 0 0 15px 0;">📊 当天心情趋势</h4>
+        <h4 style="margin: 0 0 15px 0;">📈 当天心情变化趋势</h4>
         <canvas id="dayMoodChart"></canvas>
       </div>
 

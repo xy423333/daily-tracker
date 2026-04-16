@@ -21,6 +21,7 @@ const moodMap = {
 };
 
 let moodChart = null; // ⭐新增：图表实例
+let dayMoodChartInstance = null; // ⭐新增：单日心情图表实例
 
 // 检查Firebase配置是否有效
 const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
@@ -760,8 +761,6 @@ function renderMoodChart(data) {
 }
 
 // ⭐新增：渲染单日心情趋势图
-let dayMoodChartInstance = null; // 单日图表实例
-
 function renderDayMoodChart(data) {
   const canvas = document.getElementById("dayMoodChart");
   if (!canvas) return; // 如果canvas不存在，直接返回
@@ -831,7 +830,7 @@ function renderDayMoodChart(data) {
           ticks: {
             stepSize: 1,
             callback: function(value) {
-              const emojis = {1: "😡", 2: "😢", 3: "😐", 4: "😊", 5: "😄"};
+              const emojis = {1: "😡 愤怒", 2: "😢 难过", 3: "😐 平静", 4: "😊 开心", 5: "😄 兴奋"};
               return emojis[value] || "";
             }
           },
@@ -851,12 +850,9 @@ function renderDayMoodChart(data) {
         },
         tooltip: {
           callbacks: {
-            title: function(context) {
-              return `时间：${context[0].label}`;
-            },
             label: function(context) {
               const emojis = {1: "😡 愤怒", 2: "😢 难过", 3: "😐 平静", 4: "😊 开心", 5: "😄 兴奋"};
-              return `心情：${emojis[context.parsed.y] || "未知"}`;
+              return `情绪：${emojis[context.parsed.y] || "未知"}`;
             }
           }
         }
@@ -1267,15 +1263,9 @@ ${JSON.stringify(moodData, null, 2)}
   }
 }
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js")
-    .then(registration => {
-      console.log("✅ Service Worker注册成功:", registration.scope);
-    })
-    .catch(error => {
-      console.log("❌ Service Worker注册失败:", error);
-    });
-}
+/*if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}*/
 
 // ========================================
 // 📅 日期详情页面功能
@@ -1313,7 +1303,7 @@ async function loadDayDetail() {
     // 更新标题
     document.getElementById("detailDateTitle").innerText = "📅 " + selectedDate;
 
-    // 渲染当天心情趋势图
+    // ⭐渲染当天心情趋势图
     renderDayMoodChart(data);
 
     // 渲染事件列表

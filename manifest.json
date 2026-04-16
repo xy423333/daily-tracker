@@ -1,11 +1,19 @@
 {
   "name": "Daily Mood",
   "short_name": "Mood",
+  "description": "个人日常记录追踪应用，支持心情、睡眠、饮食记录和AI情绪分析",
   "start_url": "./index.html",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#f2f2f7",
   "theme_color": "#007AFF",
+  "categories": ["lifestyle", "health"],
   "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
     {
       "src": "icon.png",
       "sizes": "192x192",
@@ -15,6 +23,18 @@
       "src": "icon.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
