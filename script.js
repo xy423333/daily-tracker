@@ -1267,9 +1267,15 @@ ${JSON.stringify(moodData, null, 2)}
   }
 }
 
-/*if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js");
-}*/
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js")
+    .then(registration => {
+      console.log("✅ Service Worker注册成功:", registration.scope);
+    })
+    .catch(error => {
+      console.log("❌ Service Worker注册失败:", error);
+    });
+}
 
 // ========================================
 // 📅 日期详情页面功能
