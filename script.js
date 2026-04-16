@@ -21,7 +21,6 @@ const moodMap = {
 };
 
 let moodChart = null; // ⭐新增：图表实例
-let dayMoodChartInstance = null; // ⭐新增：单日心情图表实例
 
 // 检查Firebase配置是否有效
 const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
@@ -150,7 +149,7 @@ async function addEvent() {
     };
 
     if (currentUser && isFirebaseConfigured) {
-      // 🔥 云端模式：保存到Firestore
+      // 🔥 云端模式：保存到Firestore并同步到本地
       const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
       
       await docRef.set({
@@ -159,7 +158,15 @@ async function addEvent() {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       
-      console.log("✅ 已保存到云端");
+      // 同步更新localStorage缓存
+      let localData = JSON.parse(localStorage.getItem("data")) || {};
+      if (!localData[selectedDate]) {
+        localData[selectedDate] = { events: [], sleep: "" };
+      }
+      localData[selectedDate].events.push(record);
+      localStorage.setItem("data", JSON.stringify(localData));
+      
+      console.log("✅ 已保存到云端并同步到本地");
     } else {
       // 💾 本地模式：保存到localStorage
       let data = JSON.parse(localStorage.getItem("data")) || {};
@@ -237,11 +244,19 @@ async function addEvent() {
 
 // 删除（双模式版）
 async function deleteEvent(index) {
-  if (!confirm("确定要删除这条记录吗？")) return;
+  console.log("🗑 开始删除记录，索引:", index, "日期:", selectedDate);
+  console.log("   当前用户:", currentUser ? currentUser.email : "未登录");
+  console.log("   Firebase配置:", isFirebaseConfigured);
+  
+  if (!confirm("确定要删除这条记录吗？")) {
+    console.log("❌ 用户取消删除");
+    return;
+  }
 
   try {
     if (currentUser && isFirebaseConfigured) {
-      // 🔥 云端模式：从Firestore删除
+      // 🔥 云端模式：从Firestore删除并同步到本地
+      console.log("🔄 云端模式：从Firestore删除...");
       const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
       const doc = await docRef.get();
       
@@ -249,31 +264,66 @@ async function deleteEvent(index) {
         const data = doc.data();
         const events = data.events || [];
         
+        console.log("   当前事件数量:", events.length);
+        console.log("   要删除的索引:", index);
+        
         if (index >= 0 && index < events.length) {
+          console.log("   删除的事件:", events[index]);
           events.splice(index, 1);
+          
+          console.log("   删除后事件数量:", events.length);
           
           await docRef.set({
             events: events,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
           
-          console.log("✅ 已从云端删除");
+          console.log("   ✅ Firestore更新成功");
+          
+          // 同步更新localStorage缓存
+          let localData = JSON.parse(localStorage.getItem("data")) || {};
+          if (localData[selectedDate]) {
+            localData[selectedDate].events = events;
+            localStorage.setItem("data", JSON.stringify(localData));
+            console.log("   ✅ localStorage同步成功");
+          } else {
+            console.log("   ⚠️ localStorage中无该日期数据");
+          }
+          
+          console.log("✅ 已从云端删除并同步到本地");
+        } else {
+          console.error("❌ 索引超出范围:", index, "事件数量:", events.length);
+          alert("删除失败：索引超出范围");
         }
+      } else {
+        console.error("❌ Firestore中无该日期数据");
+        alert("删除失败：云端无该日期数据");
       }
     } else {
       // 💾 本地模式：从localStorage删除
+      console.log("🔄 本地模式：从localStorage删除...");
       let data = JSON.parse(localStorage.getItem("data")) || {};
       
       if (data[selectedDate] && data[selectedDate].events) {
+        console.log("   当前事件数量:", data[selectedDate].events.length);
+        console.log("   要删除的索引:", index);
+        
         data[selectedDate].events.splice(index, 1);
         localStorage.setItem("data", JSON.stringify(data));
+        
+        console.log("   ✅ localStorage删除成功");
         console.log("✅ 已从本地删除");
+      } else {
+        console.error("❌ localStorage中无该日期或事件数据");
+        alert("删除失败：本地无该日期数据");
       }
     }
 
+    // 重新加载页面
+    console.log("🔄 重新加载数据...");
     load();
   } catch (error) {
-    console.error("删除失败:", error);
+    console.error("❌ 删除失败:", error);
     alert("删除失败：" + error.message);
   }
 }
@@ -305,7 +355,7 @@ async function load() {
   let data = {};
   
   if (currentUser && isFirebaseConfigured) {
-    // 🔥 云端模式：从Firestore加载
+    // 🔥 云端模式：从Firestore加载并同步到本地
     try {
       const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
       const doc = await docRef.get();
@@ -314,10 +364,23 @@ async function load() {
         const docData = doc.data();
         data[selectedDate] = {
           events: docData.events || [],
-          sleep: ""
+          sleep: docData.sleep || "",
+          sleepQuality: docData.sleepQuality || 0,
+          diet: docData.diet || "",
+          dietRating: docData.dietRating || 0
         };
+        
+        // ⭐关键：同步更新localStorage缓存
+        let localData = JSON.parse(localStorage.getItem("data")) || {};
+        localData[selectedDate] = data[selectedDate];
+        localStorage.setItem("data", JSON.stringify(localData));
+        
+        console.log("✅ 从云端加载数据并同步到本地");
+      } else {
+        // 云端没有该日期数据，使用本地数据
+        data = JSON.parse(localStorage.getItem("data")) || {};
+        console.log("⚠️ 云端无该日期数据，使用本地数据");
       }
-      console.log("✅ 从云端加载数据");
     } catch (error) {
       console.error("云端加载失败，切换到本地:", error);
       // 降级到本地存储
@@ -760,107 +823,6 @@ function renderMoodChart(data) {
   });
 }
 
-// ⭐新增：渲染单日心情趋势图
-function renderDayMoodChart(data) {
-  const canvas = document.getElementById("dayMoodChart");
-  if (!canvas) return; // 如果canvas不存在，直接返回
-
-  const dayData = data[selectedDate];
-  if (!dayData || !dayData.events || dayData.events.length === 0) {
-    // 如果没有数据，销毁旧图表并返回
-    if (dayMoodChartInstance) {
-      dayMoodChartInstance.destroy();
-      dayMoodChartInstance = null;
-    }
-    return;
-  }
-
-  // 提取当天所有带心情的记录
-  const moodEvents = dayData.events
-    .filter(e => e.mood && e.timestamp)
-    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-  if (moodEvents.length === 0) {
-    if (dayMoodChartInstance) {
-      dayMoodChartInstance.destroy();
-      dayMoodChartInstance = null;
-    }
-    return;
-  }
-
-  // 转换为图表数据
-  const labels = moodEvents.map(e => {
-    const time = new Date(e.timestamp);
-    return time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-  });
-  const scores = moodEvents.map(e => moodMap[e.mood] || 3);
-
-  const ctx = canvas.getContext("2d");
-
-  // 销毁旧图表
-  if (dayMoodChartInstance) {
-    dayMoodChartInstance.destroy();
-  }
-
-  // 创建新图表
-  dayMoodChartInstance = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: labels,
-      datasets: [{
-        label: "心情分数",
-        data: scores,
-        borderColor: "#FF6B6B",
-        backgroundColor: "rgba(255, 107, 107, 0.1)",
-        tension: 0.4,
-        fill: true,
-        pointBackgroundColor: "#FF6B6B",
-        pointRadius: 5,
-        pointHoverRadius: 7
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      aspectRatio: 2.5,
-      scales: {
-        y: {
-          min: 1,
-          max: 5,
-          ticks: {
-            stepSize: 1,
-            callback: function(value) {
-              const emojis = {1: "😡 愤怒", 2: "😢 难过", 3: "😐 平静", 4: "😊 开心", 5: "😄 兴奋"};
-              return emojis[value] || "";
-            }
-          },
-          grid: {
-            color: "rgba(0, 0, 0, 0.05)"
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          }
-        }
-      },
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const emojis = {1: "😡 愤怒", 2: "😢 难过", 3: "😐 平静", 4: "😊 开心", 5: "😄 兴奋"};
-              return `情绪：${emojis[context.parsed.y] || "未知"}`;
-            }
-          }
-        }
-      }
-    }
-  });
-}
-
 // ⭐新增：添加睡眠记录（支持多次记录）
 async function addSleepRecord() {
   const sleepHours = document.getElementById("sleep").value;
@@ -871,29 +833,44 @@ async function addSleepRecord() {
   }
 
   try {
+    // 构建睡眠记录
+    const record = {
+      event: `😴 睡眠 ${sleepHours}小时`,
+      note: sleepQualityRating > 0 ? `睡眠质量：${'⭐'.repeat(sleepQualityRating)}` : "",
+      category: "sleep",
+      sleep: sleepHours,
+      sleepQuality: sleepQualityRating,
+      timestamp: new Date().toISOString()
+    };
+
     if (currentUser && isFirebaseConfigured) {
-      // 🔥 云端模式：保存到Firestore（只保存sleep字段，不保存到events）
+      // 🔥 云端模式：保存到Firestore并同步到本地
       const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
       
       await docRef.set({
         date: selectedDate,
-        sleep: sleepHours,
-        sleepQuality: sleepQualityRating,
+        events: firebase.firestore.FieldValue.arrayUnion(record),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       
-      console.log("✅ 睡眠记录已保存到云端");
+      // 同步更新localStorage缓存
+      let localData = JSON.parse(localStorage.getItem("data")) || {};
+      if (!localData[selectedDate]) {
+        localData[selectedDate] = { events: [], sleep: "" };
+      }
+      localData[selectedDate].events.push(record);
+      localStorage.setItem("data", JSON.stringify(localData));
+      
+      console.log("✅ 睡眠记录已保存到云端并同步到本地");
     } else {
-      // 💾 本地模式：保存到localStorage（只保存sleep字段，不保存到events）
+      // 💾 本地模式：保存到localStorage
       let data = JSON.parse(localStorage.getItem("data")) || {};
       
       if (!data[selectedDate]) {
         data[selectedDate] = { events: [], sleep: "" };
       }
       
-      // ⭐ 直接保存到sleep字段，而不是events数组
-      data[selectedDate].sleep = sleepHours;
-      data[selectedDate].sleepQuality = sleepQualityRating;
+      data[selectedDate].events.push(record);
       localStorage.setItem("data", JSON.stringify(data));
       
       console.log("✅ 睡眠记录已保存到本地");
@@ -922,29 +899,36 @@ async function addDietRecord() {
   }
 
   try {
+    // 构建饮食记录
+    const record = {
+      event: `🍽 饮食`,
+      note: dietContent + (dietRatingValue > 0 ? ` ${'⭐'.repeat(dietRatingValue)}` : ""),
+      category: "diet",
+      diet: dietContent,
+      dietRating: dietRatingValue,
+      timestamp: new Date().toISOString()
+    };
+
     if (currentUser && isFirebaseConfigured) {
-      // 🔥 云端模式：保存到Firestore（只保存diet字段，不保存到events）
+      // 🔥 云端模式：保存到Firestore
       const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
       
       await docRef.set({
         date: selectedDate,
-        diet: dietContent,
-        dietRating: dietRatingValue,
+        events: firebase.firestore.FieldValue.arrayUnion(record),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       
       console.log("✅ 饮食记录已保存到云端");
     } else {
-      // 💾 本地模式：保存到localStorage（只保存diet字段，不保存到events）
+      // 💾 本地模式：保存到localStorage
       let data = JSON.parse(localStorage.getItem("data")) || {};
       
       if (!data[selectedDate]) {
-        data[selectedDate] = { events: [], sleep: "", diet: "", dietRating: 0 };
+        data[selectedDate] = { events: [], sleep: "" };
       }
       
-      // ⭐ 直接保存到diet字段，而不是events数组
-      data[selectedDate].diet = dietContent;
-      data[selectedDate].dietRating = dietRatingValue;
+      data[selectedDate].events.push(record);
       localStorage.setItem("data", JSON.stringify(data));
       
       console.log("✅ 饮食记录已保存到本地");
@@ -1064,15 +1048,56 @@ async function logout() {
   }
 }
 
+// ⭐新增：从云端同步所有数据到本地
+async function syncCloudDataToLocal() {
+  if (!currentUser || !isFirebaseConfigured) {
+    console.log("⚠️ 未登录或Firebase未配置，跳过同步");
+    return;
+  }
+  
+  try {
+    console.log("🔄 开始从云端同步数据...");
+    
+    // 从Firestore获取所有数据
+    const snapshot = await db.collection("users").doc(currentUser.uid).collection("days").get();
+    const cloudData = {};
+    
+    snapshot.forEach(doc => {
+      cloudData[doc.id] = doc.data();
+    });
+    
+    console.log("✅ 从云端获取到", Object.keys(cloudData).length, "天的数据");
+    
+    // 合并到localStorage（云端数据优先）
+    let localData = JSON.parse(localStorage.getItem("data")) || {};
+    
+    // 将云端数据合并到本地数据
+    Object.keys(cloudData).forEach(date => {
+      localData[date] = cloudData[date];
+    });
+    
+    // 保存回localStorage
+    localStorage.setItem("data", JSON.stringify(localData));
+    
+    console.log("✅ 数据同步完成，共", Object.keys(localData).length, "天");
+  } catch (error) {
+    console.error("❌ 数据同步失败:", error);
+  }
+}
+
 // 监听认证状态变化（修复版）
 if (isFirebaseConfigured && auth) {
-  auth.onAuthStateChanged((user) => {
+  auth.onAuthStateChanged(async (user) => {
     if (user) {
       // 用户已登录
       currentUser = user;
       document.getElementById("userEmail").innerText = user.email;
       document.getElementById("mainTabbar").style.display = "flex";
       updateProfilePage();
+      
+      // ⭐关键：登录时先从云端同步数据到本地
+      await syncCloudDataToLocal();
+      
       switchTab("home");
       load();
       console.log("✅ 用户已登录:", user.email);
@@ -1289,9 +1314,6 @@ async function loadDayDetail() {
     // 更新标题
     document.getElementById("detailDateTitle").innerText = "📅 " + selectedDate;
 
-    // ⭐渲染当天心情趋势图
-    renderDayMoodChart(data);
-
     // 渲染事件列表
     renderEventsList(data);
     
@@ -1480,8 +1502,31 @@ function addRecordInDetail() {
 /**
  * 编辑事件
  */
-function editEvent(index) {
-  let data = JSON.parse(localStorage.getItem("data")) || {};
+async function editEvent(index) {
+  let data;
+  
+  // ⭐优先从云端读取（如果已登录）
+  if (currentUser && isFirebaseConfigured) {
+    try {
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        data = {};
+        data[selectedDate] = doc.data();
+        console.log("✅ 从云端加载编辑数据");
+      } else {
+        data = JSON.parse(localStorage.getItem("data")) || {};
+        console.log("⚠️ 云端无数据，使用本地数据");
+      }
+    } catch (error) {
+      console.error("云端读取失败，使用本地数据:", error);
+      data = JSON.parse(localStorage.getItem("data")) || {};
+    }
+  } else {
+    data = JSON.parse(localStorage.getItem("data")) || {};
+  }
+  
   const dayData = data[selectedDate];
   
   if (!dayData || !dayData.events || !dayData.events[index]) {
@@ -1518,8 +1563,31 @@ function editEvent(index) {
 /**
  * 编辑睡眠记录
  */
-function editSleepInDetail() {
-  let data = JSON.parse(localStorage.getItem("data")) || {};
+async function editSleepInDetail() {
+  let data;
+  
+  // ⭐优先从云端读取（如果已登录）
+  if (currentUser && isFirebaseConfigured) {
+    try {
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        data = {};
+        data[selectedDate] = doc.data();
+        console.log("✅ 从云端加载睡眠编辑数据");
+      } else {
+        data = JSON.parse(localStorage.getItem("data")) || {};
+        console.log("⚠️ 云端无数据，使用本地数据");
+      }
+    } catch (error) {
+      console.error("云端读取失败，使用本地数据:", error);
+      data = JSON.parse(localStorage.getItem("data")) || {};
+    }
+  } else {
+    data = JSON.parse(localStorage.getItem("data")) || {};
+  }
+  
   const dayData = data[selectedDate];
   
   modalMode = 'sleep';
@@ -1544,8 +1612,31 @@ function editSleepInDetail() {
 /**
  * 编辑饮食记录
  */
-function editDietInDetail() {
-  let data = JSON.parse(localStorage.getItem("data")) || {};
+async function editDietInDetail() {
+  let data;
+  
+  // ⭐优先从云端读取（如果已登录）
+  if (currentUser && isFirebaseConfigured) {
+    try {
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        data = {};
+        data[selectedDate] = doc.data();
+        console.log("✅ 从云端加载饮食编辑数据");
+      } else {
+        data = JSON.parse(localStorage.getItem("data")) || {};
+        console.log("⚠️ 云端无数据，使用本地数据");
+      }
+    } catch (error) {
+      console.error("云端读取失败，使用本地数据:", error);
+      data = JSON.parse(localStorage.getItem("data")) || {};
+    }
+  } else {
+    data = JSON.parse(localStorage.getItem("data")) || {};
+  }
+  
   const dayData = data[selectedDate];
   
   modalMode = 'diet';
@@ -1732,29 +1823,86 @@ async function saveModalRecord() {
  * 从详情页删除事件
  */
 async function deleteEventFromDetail(index) {
-  if (!confirm("确定要删除这条记录吗？")) return;
+  console.log("🗑 [详情页] 开始删除记录，索引:", index, "日期:", selectedDate);
+  console.log("   当前用户:", currentUser ? currentUser.email : "未登录");
+  console.log("   Firebase配置:", isFirebaseConfigured);
+  
+  if (!confirm("确定要删除这条记录吗？")) {
+    console.log("❌ 用户取消删除");
+    return;
+  }
   
   try {
-    let data = JSON.parse(localStorage.getItem("data")) || {};
-    
-    if (data[selectedDate] && data[selectedDate].events) {
-      data[selectedDate].events.splice(index, 1);
-      localStorage.setItem("data", JSON.stringify(data));
+    if (currentUser && isFirebaseConfigured) {
+      // 🔥 云端模式：从Firestore删除并同步到本地
+      console.log("🔄 [详情页] 云端模式：从Firestore删除...");
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      const doc = await docRef.get();
       
-      // 如果已登录且配置了Firebase，同步到云端
-      if (currentUser && isFirebaseConfigured) {
-        const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
-        await docRef.set({
-          events: data[selectedDate].events,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+      if (doc.exists) {
+        const data = doc.data();
+        const events = data.events || [];
+        
+        console.log("   当前事件数量:", events.length);
+        console.log("   要删除的索引:", index);
+        
+        if (index >= 0 && index < events.length) {
+          console.log("   删除的事件:", events[index]);
+          events.splice(index, 1);
+          
+          console.log("   删除后事件数量:", events.length);
+          
+          await docRef.set({
+            events: events,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          
+          console.log("   ✅ Firestore更新成功");
+          
+          // 同步更新localStorage缓存
+          let localData = JSON.parse(localStorage.getItem("data")) || {};
+          if (localData[selectedDate]) {
+            localData[selectedDate].events = events;
+            localStorage.setItem("data", JSON.stringify(localData));
+            console.log("   ✅ localStorage同步成功");
+          } else {
+            console.log("   ⚠️ localStorage中无该日期数据");
+          }
+          
+          console.log("✅ [详情页] 已从云端删除并同步到本地");
+        } else {
+          console.error("❌ 索引超出范围:", index, "事件数量:", events.length);
+          alert("删除失败：索引超出范围");
+        }
+      } else {
+        console.error("❌ Firestore中无该日期数据");
+        alert("删除失败：云端无该日期数据");
       }
+    } else {
+      // 💾 本地模式：从localStorage删除
+      console.log("🔄 [详情页] 本地模式：从localStorage删除...");
+      let data = JSON.parse(localStorage.getItem("data")) || {};
       
-      // 重新加载详情页面
-      loadDayDetail();
+      if (data[selectedDate] && data[selectedDate].events) {
+        console.log("   当前事件数量:", data[selectedDate].events.length);
+        console.log("   要删除的索引:", index);
+        
+        data[selectedDate].events.splice(index, 1);
+        localStorage.setItem("data", JSON.stringify(data));
+        
+        console.log("   ✅ localStorage删除成功");
+        console.log("✅ [详情页] 已从本地删除");
+      } else {
+        console.error("❌ localStorage中无该日期或事件数据");
+        alert("删除失败：本地无该日期数据");
+      }
     }
+    
+    // 重新加载详情页面
+    console.log("🔄 [详情页] 重新加载详情...");
+    loadDayDetail();
   } catch (error) {
-    console.error("删除失败:", error);
+    console.error("❌ [详情页] 删除失败:", error);
     alert("删除失败：" + error.message);
   }
 }
