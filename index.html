@@ -205,21 +205,106 @@
     <div class="detail-content">
       <!-- 事件内容 -->
       <div class="content-section active" id="content-events">
-        <h4>📝 事件记录</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h4 style="margin: 0;">📝 事件记录</h4>
+          <button onclick="addRecordInDetail()" class="add-record-btn">➕ 补录</button>
+        </div>
         <div id="eventsList" class="events-list"></div>
       </div>
 
       <!-- 睡眠内容 -->
       <div class="content-section" id="content-sleep">
-        <h4>😴 睡眠记录</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h4 style="margin: 0;">😴 睡眠记录</h4>
+          <button onclick="editSleepInDetail()" class="add-record-btn">✏️ 编辑</button>
+        </div>
         <div id="sleepInfo" class="info-card"></div>
       </div>
 
       <!-- 饮食内容 -->
       <div class="content-section" id="content-diet">
-        <h4>🍽 饮食记录</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h4 style="margin: 0;">🍽 饮食记录</h4>
+          <button onclick="editDietInDetail()" class="add-record-btn">✏️ 编辑</button>
+        </div>
         <div id="dietInfo" class="info-card"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑弹窗（Modal） -->
+<div id="editModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modalTitle">编辑记录</h3>
+      <button onclick="closeEditModal()" class="close-btn">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- 心情选择 -->
+      <div class="form-group">
+        <label>心情：</label>
+        <div class="mood" id="modalMoodList">
+          <span onclick="selectModalMood('😄')">😄</span>
+          <span onclick="selectModalMood('😐')">😐</span>
+          <span onclick="selectModalMood('😢')">😢</span>
+          <span onclick="selectModalMood('😡')">😡</span>
+          <span onclick="selectModalMood('🥱')">🥱</span>
+          <span onclick="selectModalMood('😍')">😍</span>
+        </div>
+      </div>
+
+      <!-- 事件输入 -->
+      <div class="form-group">
+        <label>事件：</label>
+        <input type="text" id="modalEvent" placeholder="今天发生了什么？">
+      </div>
+
+      <!-- 感想输入 -->
+      <div class="form-group">
+        <label>感想：</label>
+        <textarea id="modalNote" rows="3" placeholder="你的感受..."></textarea>
+      </div>
+
+      <!-- 睡眠表单（默认隐藏） -->
+      <div id="modalSleepForm" style="display: none;">
+        <div class="form-group">
+          <label>睡眠时长（小时）：</label>
+          <input type="number" id="modalSleep" placeholder="例如：8">
+        </div>
+        <div class="form-group">
+          <label>睡眠质量：</label>
+          <div class="star-rating" id="modalSleepQuality">
+            <span data-value="1" onclick="selectModalSleepQuality(1)">⭐</span>
+            <span data-value="2" onclick="selectModalSleepQuality(2)">⭐</span>
+            <span data-value="3" onclick="selectModalSleepQuality(3)">⭐</span>
+            <span data-value="4" onclick="selectModalSleepQuality(4)">⭐</span>
+            <span data-value="5" onclick="selectModalSleepQuality(5)">⭐</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 饮食表单（默认隐藏） -->
+      <div id="modalDietForm" style="display: none;">
+        <div class="form-group">
+          <label>饮食内容：</label>
+          <textarea id="modalDiet" rows="2" placeholder="例如：早餐：鸡蛋牛奶"></textarea>
+        </div>
+        <div class="form-group">
+          <label>美味程度：</label>
+          <div class="star-rating" id="modalDietRating">
+            <span data-value="1" onclick="selectModalDietRating(1)">⭐</span>
+            <span data-value="2" onclick="selectModalDietRating(2)">⭐</span>
+            <span data-value="3" onclick="selectModalDietRating(3)">⭐</span>
+            <span data-value="4" onclick="selectModalDietRating(4)">⭐</span>
+            <span data-value="5" onclick="selectModalDietRating(5)">⭐</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeEditModal()" class="cancel-btn">取消</button>
+      <button onclick="saveModalRecord()" class="save-btn">保存</button>
     </div>
   </div>
 </div>

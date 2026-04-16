@@ -1198,6 +1198,10 @@ function renderEventsList(data) {
       <div class="event-title">${event.event || ''}</div>
       ${event.note ? `<div class="event-note">${event.note}</div>` : ''}
       ${timeStr ? `<div class="event-time">🕐 ${timeStr}</div>` : ''}
+      <div class="event-actions">
+        <button class="edit-btn" onclick="editEvent(${index})">✏️ 编辑</button>
+        <button class="delete-btn" onclick="deleteEventFromDetail(${index})">🗑 删除</button>
+      </div>
     `;
     
     container.appendChild(eventDiv);
@@ -1292,4 +1296,319 @@ function switchDetailTab(tabName) {
  */
 function backToCalendar() {
   switchTab("calendar");
+}
+
+// ========================================
+// ✏️ 补录和编辑功能
+// ========================================
+
+// 弹窗状态管理
+let modalMode = 'event'; // 'event', 'sleep', 'diet'
+let editingIndex = -1; // -1表示新增，>=0表示编辑
+let modalMoodValue = '';
+let modalSleepQualityValue = 0;
+let modalDietRatingValue = 0;
+
+/**
+ * 打开补录弹窗（事件）
+ */
+function addRecordInDetail() {
+  modalMode = 'event';
+  editingIndex = -1;
+  
+  document.getElementById("modalTitle").innerText = "➕ 补录事件";
+  document.getElementById("modalSleepForm").style.display = "none";
+  document.getElementById("modalDietForm").style.display = "none";
+  document.getElementById("modalMoodList").style.display = "flex";
+  
+  // 清空表单
+  document.getElementById("modalEvent").value = "";
+  document.getElementById("modalNote").value = "";
+  modalMoodValue = '';
+  document.querySelectorAll("#modalMoodList span").forEach(s => s.classList.remove("selected"));
+  
+  // 显示弹窗
+  document.getElementById("editModal").style.display = "flex";
+}
+
+/**
+ * 编辑事件
+ */
+function editEvent(index) {
+  let data = JSON.parse(localStorage.getItem("data")) || {};
+  const dayData = data[selectedDate];
+  
+  if (!dayData || !dayData.events || !dayData.events[index]) {
+    alert("记录不存在");
+    return;
+  }
+  
+  const event = dayData.events[index];
+  modalMode = 'event';
+  editingIndex = index;
+  
+  document.getElementById("modalTitle").innerText = "✏️ 编辑事件";
+  document.getElementById("modalSleepForm").style.display = "none";
+  document.getElementById("modalDietForm").style.display = "none";
+  document.getElementById("modalMoodList").style.display = "flex";
+  
+  // 填充表单
+  document.getElementById("modalEvent").value = event.event || "";
+  document.getElementById("modalNote").value = event.note || "";
+  modalMoodValue = event.mood || '';
+  
+  // 选中心情
+  document.querySelectorAll("#modalMoodList span").forEach(s => {
+    s.classList.remove("selected");
+    if (s.innerText === modalMoodValue) {
+      s.classList.add("selected");
+    }
+  });
+  
+  // 显示弹窗
+  document.getElementById("editModal").style.display = "flex";
+}
+
+/**
+ * 编辑睡眠记录
+ */
+function editSleepInDetail() {
+  let data = JSON.parse(localStorage.getItem("data")) || {};
+  const dayData = data[selectedDate];
+  
+  modalMode = 'sleep';
+  editingIndex = -1;
+  
+  document.getElementById("modalTitle").innerText = dayData && dayData.sleep ? "✏️ 编辑睡眠" : "➕ 添加睡眠";
+  document.getElementById("modalSleepForm").style.display = "block";
+  document.getElementById("modalDietForm").style.display = "none";
+  document.getElementById("modalMoodList").style.display = "none";
+  
+  // 填充表单
+  document.getElementById("modalSleep").value = (dayData && dayData.sleep) || "";
+  modalSleepQualityValue = (dayData && dayData.sleepQuality) || 0;
+  
+  // 更新星级显示
+  updateModalSleepQualityStars();
+  
+  // 显示弹窗
+  document.getElementById("editModal").style.display = "flex";
+}
+
+/**
+ * 编辑饮食记录
+ */
+function editDietInDetail() {
+  let data = JSON.parse(localStorage.getItem("data")) || {};
+  const dayData = data[selectedDate];
+  
+  modalMode = 'diet';
+  editingIndex = -1;
+  
+  document.getElementById("modalTitle").innerText = dayData && dayData.diet ? "✏️ 编辑饮食" : "➕ 添加饮食";
+  document.getElementById("modalSleepForm").style.display = "none";
+  document.getElementById("modalDietForm").style.display = "block";
+  document.getElementById("modalMoodList").style.display = "none";
+  
+  // 填充表单
+  document.getElementById("modalDiet").value = (dayData && dayData.diet) || "";
+  modalDietRatingValue = (dayData && dayData.dietRating) || 0;
+  
+  // 更新星级显示
+  updateModalDietRatingStars();
+  
+  // 显示弹窗
+  document.getElementById("editModal").style.display = "flex";
+}
+
+/**
+ * 选择弹窗中的心情
+ */
+function selectModalMood(mood) {
+  modalMoodValue = mood;
+  document.querySelectorAll("#modalMoodList span").forEach(s => {
+    s.classList.remove("selected");
+    if (s.innerText === mood) {
+      s.classList.add("selected");
+    }
+  });
+}
+
+/**
+ * 选择弹窗中的睡眠质量
+ */
+function selectModalSleepQuality(rating) {
+  modalSleepQualityValue = rating;
+  updateModalSleepQualityStars();
+}
+
+/**
+ * 更新弹窗睡眠质量星级显示
+ */
+function updateModalSleepQualityStars() {
+  document.querySelectorAll("#modalSleepQuality span").forEach((star, index) => {
+    if (index < modalSleepQualityValue) {
+      star.classList.add("active");
+    } else {
+      star.classList.remove("active");
+    }
+  });
+}
+
+/**
+ * 选择弹窗中的饮食评分
+ */
+function selectModalDietRating(rating) {
+  modalDietRatingValue = rating;
+  updateModalDietRatingStars();
+}
+
+/**
+ * 更新弹窗饮食评分星级显示
+ */
+function updateModalDietRatingStars() {
+  document.querySelectorAll("#modalDietRating span").forEach((star, index) => {
+    if (index < modalDietRatingValue) {
+      star.classList.add("active");
+    } else {
+      star.classList.remove("active");
+    }
+  });
+}
+
+/**
+ * 关闭弹窗
+ */
+function closeEditModal() {
+  document.getElementById("editModal").style.display = "none";
+  editingIndex = -1;
+}
+
+/**
+ * 保存弹窗中的记录
+ */
+async function saveModalRecord() {
+  try {
+    let data = JSON.parse(localStorage.getItem("data")) || {};
+    
+    if (!data[selectedDate]) {
+      data[selectedDate] = { events: [], sleep: "", sleepQuality: 0, diet: "", dietRating: 0 };
+    }
+    
+    if (modalMode === 'event') {
+      // 保存事件
+      const eventValue = document.getElementById("modalEvent").value.trim();
+      if (!eventValue) {
+        alert("事件不能为空");
+        return;
+      }
+      
+      const record = {
+        event: eventValue,
+        note: document.getElementById("modalNote").value,
+        mood: modalMoodValue,
+        timestamp: new Date().toISOString()
+      };
+      
+      if (editingIndex >= 0) {
+        // 编辑模式
+        data[selectedDate].events[editingIndex] = record;
+      } else {
+        // 新增模式
+        data[selectedDate].events.push(record);
+      }
+      
+    } else if (modalMode === 'sleep') {
+      // 保存睡眠
+      const sleepValue = document.getElementById("modalSleep").value;
+      if (!sleepValue) {
+        alert("睡眠时长不能为空");
+        return;
+      }
+      
+      data[selectedDate].sleep = sleepValue;
+      data[selectedDate].sleepQuality = modalSleepQualityValue;
+      
+    } else if (modalMode === 'diet') {
+      // 保存饮食
+      const dietValue = document.getElementById("modalDiet").value.trim();
+      if (!dietValue) {
+        alert("饮食内容不能为空");
+        return;
+      }
+      
+      data[selectedDate].diet = dietValue;
+      data[selectedDate].dietRating = modalDietRatingValue;
+    }
+    
+    // 保存到localStorage
+    localStorage.setItem("data", JSON.stringify(data));
+    
+    // 如果已登录且配置了Firebase，同步到云端
+    if (currentUser && isFirebaseConfigured) {
+      const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+      
+      if (modalMode === 'event') {
+        await docRef.set({
+          events: data[selectedDate].events,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      } else if (modalMode === 'sleep') {
+        await docRef.set({
+          sleep: data[selectedDate].sleep,
+          sleepQuality: data[selectedDate].sleepQuality,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      } else if (modalMode === 'diet') {
+        await docRef.set({
+          diet: data[selectedDate].diet,
+          dietRating: data[selectedDate].dietRating,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+    }
+    
+    // 关闭弹窗
+    closeEditModal();
+    
+    // 重新加载详情页面
+    loadDayDetail();
+    
+    alert("保存成功！");
+    
+  } catch (error) {
+    console.error("保存失败:", error);
+    alert("保存失败：" + error.message);
+  }
+}
+
+/**
+ * 从详情页删除事件
+ */
+async function deleteEventFromDetail(index) {
+  if (!confirm("确定要删除这条记录吗？")) return;
+  
+  try {
+    let data = JSON.parse(localStorage.getItem("data")) || {};
+    
+    if (data[selectedDate] && data[selectedDate].events) {
+      data[selectedDate].events.splice(index, 1);
+      localStorage.setItem("data", JSON.stringify(data));
+      
+      // 如果已登录且配置了Firebase，同步到云端
+      if (currentUser && isFirebaseConfigured) {
+        const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
+        await docRef.set({
+          events: data[selectedDate].events,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+      
+      // 重新加载详情页面
+      loadDayDetail();
+    }
+  } catch (error) {
+    console.error("删除失败:", error);
+    alert("删除失败：" + error.message);
+  }
 }
