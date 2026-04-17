@@ -48,6 +48,10 @@ let selectedCategory = "mood"; // ⭐新增：当前选择的分类（mood/sleep
 let sleepQualityRating = 0; // ⭐新增：睡眠质量星级
 let dietRatingValue = 0; // ⭐新增：饮食美味星级
 
+// 🔥 实时同步监听器（新增）
+let unsubscribeDay = null;   // 当天数据监听
+let unsubscribeMonth = null; // 月份数据监听
+
 // ✅ 绑定心情点击（修复版）
 function bindMoodEvents() {
   const moodSpans = document.querySelectorAll("#moodList span");
@@ -309,45 +313,64 @@ async function saveSleep() {
 // 点击日历
 function selectDate(date) {
   selectedDate = date;
+  
+  // 🔥 切换监听目标（重新加载当天数据）
+  load();
+  
   // 跳转到日期详情页面
   switchTab("daydetail");
   loadDayDetail();
 }
 
-// 加载数据（纯云端版）
-async function load() {
+// 加载数据（🔥实时同步版 - onSnapshot）
+function load() {
   if (!currentUser || !isFirebaseConfigured) {
     console.log("⚠️ 用户未登录，跳过数据加载");
     return;
   }
   
-  let data = {};
-  
-  try {
-    // 🔥 纯云端模式：只从Firestore加载
-    const docRef = db.collection("users").doc(currentUser.uid).collection("days").doc(selectedDate);
-    const doc = await docRef.get();
-    
+  // 🔥 取消之前的监听（防止重复监听导致内存泄漏）
+  if (unsubscribeDay) {
+    console.log("🔄 取消旧的当天数据监听");
+    unsubscribeDay();
+    unsubscribeDay = null;
+  }
+
+  const docRef = db
+    .collection("users")
+    .doc(currentUser.uid)
+    .collection("days")
+    .doc(selectedDate);
+
+  console.log("🔥 开始实时监听当天数据:", selectedDate);
+
+  // 🔥 实时监听当天数据
+  unsubscribeDay = docRef.onSnapshot(doc => {
+    let data = {};
+
     if (doc.exists) {
-      const docData = doc.data();
+      const d = doc.data();
       data[selectedDate] = {
-        events: docData.events || [],
-        sleep: docData.sleep || "",
-        sleepQuality: docData.sleepQuality || 0,
-        diet: docData.diet || "",
-        dietRating: docData.dietRating || 0
+        events: d.events || [],
+        sleep: d.sleep || "",
+        sleepQuality: d.sleepQuality || 0,
+        diet: d.diet || "",
+        dietRating: d.dietRating || 0
       };
-      
-      console.log("✅ 从云端加载数据");
+      console.log("🔥 实时更新（当天数据）");
     } else {
       console.log("ℹ️ 云端无该日期数据");
     }
-  } catch (error) {
-    console.error("❌ 云端加载失败:", error);
-    alert("加载失败：" + error.message);
-    return;
-  }
 
+    renderDay(data);
+  }, error => {
+    console.error("❌ 实时监听失败:", error);
+    alert("数据同步失败：" + error.message);
+  });
+}
+
+// 🔥 统一渲染函数（实时同步版）
+function renderDay(data) {
   const list = document.getElementById("list");
   const title = document.getElementById("currentDateTitle");
 
@@ -366,8 +389,10 @@ async function load() {
     });
 
     document.getElementById("sleep").value = data[selectedDate].sleep || "";
+    document.getElementById("diet").value = data[selectedDate].diet || "";
   } else {
     document.getElementById("sleep").value = "";
+    document.getElementById("diet").value = "";
   }
 
   bindMoodEvents(); // ⭐关键：重新绑定心情事件
@@ -510,21 +535,44 @@ async function changeMonth(offset) {
     currentYear--;
   }
 
-  // 🔥 从云端加载数据并渲染日历
-  try {
-    const snapshot = await db.collection("users").doc(currentUser.uid).collection("days").get();
-    const data = {};
-    
-    snapshot.forEach(doc => {
-      data[doc.id] = doc.data();
-    });
-    
-    renderCalendar(data);
-    console.log("✅ 月份切换完成，从云端加载数据");
-  } catch (error) {
-    console.error("切换月份失败:", error);
-    alert("切换失败：" + error.message);
+  // 🔥 重新启动月份监听（会自动获取新月份数据）
+  listenMonthData();
+  console.log("✅ 月份切换完成，实时监听已更新");
+}
+
+// 🔥 月份数据实时监听（新增）
+async function listenMonthData() {
+  if (!currentUser || !isFirebaseConfigured) {
+    console.log("⚠️ 用户未登录，跳过月份监听");
+    return;
   }
+
+  // 🔥 取消之前的监听（防止重复监听）
+  if (unsubscribeMonth) {
+    console.log("🔄 取消旧的月份数据监听");
+    unsubscribeMonth();
+    unsubscribeMonth = null;
+  }
+
+  console.log("🔥 开始实时监听月份数据");
+
+  // 🔥 实时监听days集合（所有日期）
+  unsubscribeMonth = db
+    .collection("users")
+    .doc(currentUser.uid)
+    .collection("days")
+    .onSnapshot(snapshot => {
+      const data = {};
+
+      snapshot.forEach(doc => {
+        data[doc.id] = doc.data();
+      });
+
+      console.log("🔥 实时更新（日历数据），共", Object.keys(data).length, "天");
+      renderCalendar(data);
+    }, error => {
+      console.error("❌ 月份数据监听失败:", error);
+    });
 }
 
 // 页面切换（重构版）
@@ -555,30 +603,9 @@ function switchTab(tab) {
     updateProfilePage();
   }
 
-  // 🔥 如果切换到日历，从云端加载数据并渲染
+  // 🔥 如果切换到日历，启动实时监听
   if (tab === "calendar") {
-    // ⭐登录锁：必须登录后才能操作
-    if (!currentUser || !isFirebaseConfigured) {
-      console.log("⚠️ 用户未登录，跳过日历渲染");
-      return;
-    }
-    
-    // 从云端加载整个月份的数据
-    (async () => {
-      try {
-        const snapshot = await db.collection("users").doc(currentUser.uid).collection("days").get();
-        const data = {};
-        
-        snapshot.forEach(doc => {
-          data[doc.id] = doc.data();
-        });
-        
-        renderCalendar(data);
-        console.log("✅ 月份切换完成，从云端加载数据");
-      } catch (error) {
-        console.error("切换月份失败:", error);
-      }
-    })();
+    listenMonthData();
   }
 }
 
@@ -1056,8 +1083,10 @@ if (isFirebaseConfigured && auth) {
       updateProfilePage();
       
       switchTab("home");
-      load();
+      load();  // 🔥 启动当天数据实时监听
+      listenMonthData();  // 🔥 启动月份数据实时监听
       console.log("✅ 用户已登录:", user.email);
+      console.log("🔥 实时同步已启动");
     } else {
       // 用户未登录
       currentUser = null;
@@ -1065,7 +1094,18 @@ if (isFirebaseConfigured && auth) {
       document.getElementById("mainTabbar").style.display = "none"; // ⭐隐藏导航栏，强制登录
       updateProfilePage();
       switchTab("home");
-      console.log("ℹ️ 未登录，请先登录");
+      
+      // 🔥 取消所有监听
+      if (unsubscribeDay) {
+        unsubscribeDay();
+        unsubscribeDay = null;
+      }
+      if (unsubscribeMonth) {
+        unsubscribeMonth();
+        unsubscribeMonth = null;
+      }
+      
+      console.log("ℹ️ 未登录，实时同步已停止");
     }
   });
 } else {
