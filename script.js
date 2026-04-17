@@ -21,6 +21,7 @@ const moodMap = {
 };
 
 let moodChart = null; // ⭐新增：图表实例
+let dayMoodChartInstance = null; // 🔥新增：当日心情曲线图表实例
 
 // 检查Firebase配置是否有效
 const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
@@ -893,6 +894,135 @@ function renderMoodChart(data) {
   });
 }
 
+// 🔥新增：渲染当日心情曲线（显示一天内的心情波动）
+function renderDayMoodChart(dayData) {
+  const canvas = document.getElementById("dayMoodChart");
+  if (!canvas) {
+    console.log("⚠️ 当日心情曲线canvas不存在");
+    return;
+  }
+
+  // 提取当天所有心情数据
+  if (!dayData || !dayData[selectedDate]) {
+    console.log("ℹ️ 当日无数据，清空心情曲线");
+    if (dayMoodChartInstance) {
+      dayMoodChartInstance.destroy();
+      dayMoodChartInstance = null;
+    }
+    return;
+  }
+
+  const events = dayData[selectedDate].events || [];
+  const moodEvents = events.filter(e => e.mood);
+
+  if (moodEvents.length === 0) {
+    console.log("ℹ️ 当日无心情记录，清空图表");
+    if (dayMoodChartInstance) {
+      dayMoodChartInstance.destroy();
+      dayMoodChartInstance = null;
+    }
+    return;
+  }
+
+  // 准备数据：时间 + 心情分数
+  const labels = [];
+  const scores = [];
+  const emojis = [];
+
+  moodEvents.forEach(event => {
+    let timeLabel = "无时间";
+    if (event.timestamp) {
+      const time = new Date(event.timestamp);
+      timeLabel = time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    }
+    labels.push(timeLabel);
+    scores.push(moodMap[event.mood] || 3);
+    emojis.push(event.mood);
+  });
+
+  const ctx = canvas.getContext("2d");
+
+  // 销毁旧图表
+  if (dayMoodChartInstance) {
+    dayMoodChartInstance.destroy();
+  }
+
+  // 创建新图表
+  dayMoodChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "当日心情",
+        data: scores,
+        borderColor: "#FF6B6B",
+        backgroundColor: "rgba(255, 107, 107, 0.1)",
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: scores.map(s => {
+          const colors = {1: "#FF4444", 2: "#FF8C42", 3: "#FFD93D", 4: "#6BCB77", 5: "#4D96FF"};
+          return colors[s] || "#999";
+        }),
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        pointLabel: emojis
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2,
+      scales: {
+        y: {
+          min: 1,
+          max: 5,
+          ticks: {
+            stepSize: 1,
+            callback: function(value) {
+              const emojiMap = {1: "😡", 2: "😢", 3: "😐", 4: "😊", 5: "😄"};
+              return emojiMap[value] || "";
+            }
+          },
+          grid: {
+            color: "rgba(0, 0, 0, 0.05)"
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45,
+            font: {
+              size: 11
+            }
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            title: function(context) {
+              return `时间：${context[0].label}`;
+            },
+            label: function(context) {
+              const emojiMap = {1: "😡 愤怒", 2: "😢 难过", 3: "😐 平静", 4: "😊 开心", 5: "😄 兴奋"};
+              const emoji = emojis[context.dataIndex] || "";
+              return `心情：${emoji} ${emojiMap[context.parsed.y] || "未知"}`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  console.log("🔥 当日心情曲线渲染完成，共", moodEvents.length, "条心情记录");
+}
+
 // ⭐新增：添加睡眠记录（纯云端版 - 独立字段）
 async function addSleepRecord() {
   if (!currentUser || !isFirebaseConfigured) {
@@ -1316,6 +1446,9 @@ async function loadDayDetail() {
     
     // 渲染饮食信息
     renderDietInfo(data);
+    
+    // 🔥渲染当日心情曲线
+    renderDayMoodChart(data);
 
     // 默认显示事件标签
     switchDetailTab('events');
